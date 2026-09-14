@@ -1,7 +1,6 @@
+import {redirect} from "next/navigation";
+import {ROUTES} from "@/app/_constants";
+
 export default function page() {
-  return (
-    <div>
-      <h2>Let us begin</h2>
-    </div>
-  );
+  redirect(ROUTES.home);
 }
