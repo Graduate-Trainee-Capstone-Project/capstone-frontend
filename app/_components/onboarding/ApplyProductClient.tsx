@@ -7,15 +7,16 @@ import {useOnboardingStore} from "@/app/_hooks/useOnboardingStore";
 import {IdentifierCaptureStep} from "@/app/_components/onboarding/IdentifierCaptureStep";
 import {SecurityVerificationStep} from "@/app/_components/onboarding/SecurityVerificationStep";
 import {PersonalInfoStep} from "@/app/_components/onboarding/PersonalInfoStep";
-import {HandoffPlaceholder} from "@/app/_components/onboarding/HandoffPlaceholder";
+import {ProductSpecificInfoStep} from "@/app/_components/onboarding/ProductSpecificInfoStep";
+import {DocumentUploadStep} from "@/app/_components/onboarding/DocumentUploadStep";
+import {ReviewStep} from "@/app/_components/onboarding/ReviewStep";
+import {ConfirmationStep} from "@/app/_components/onboarding/ConfirmationStep";
 import {Skeleton} from "@/app/_components/ui/Skeleton";
 import type {ProductCode} from "@/app/_types";
 
 interface ApplyProductClientProps {
   productCode: ProductCode;
 }
-
-const STEPS_BEYOND_SCOPE = new Set(["PRODUCT_SPECIFIC_INFO", "DOCUMENT_UPLOAD", "REVIEW", "SUBMITTED"]);
 
 /**
  * Pure switch on state — no business logic lives here. Same URL, reloaded
@@ -71,8 +72,20 @@ export function ApplyProductClient({productCode}: ApplyProductClientProps) {
     return <PersonalInfoStep />;
   }
 
-  if (currentStep && STEPS_BEYOND_SCOPE.has(currentStep)) {
-    return <HandoffPlaceholder />;
+  if (currentStep === "PRODUCT_SPECIFIC_INFO") {
+    return <ProductSpecificInfoStep />;
+  }
+
+  if (currentStep === "DOCUMENT_UPLOAD") {
+    return <DocumentUploadStep />;
+  }
+
+  if (currentStep === "REVIEW") {
+    return <ReviewStep />;
+  }
+
+  if (currentStep === "SUBMITTED") {
+    return <ConfirmationStep />;
   }
 
   return <IdentifierCaptureStep productCode={productCode} />;
