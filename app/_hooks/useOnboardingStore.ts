@@ -2,7 +2,12 @@
 
 import {create} from "zustand";
 import {persist} from "zustand/middleware";
-import type {DraftStep, ProductCode, StartApplicationResponse} from "@/app/_types";
+import type {
+  DraftStep,
+  FinalizeApplicationResponse,
+  ProductCode,
+  StartApplicationResponse,
+} from "@/app/_types";
 
 type SecurityCheckSubStep = "SECURITY_QUESTION" | "FACIAL_RECOGNITION" | null;
 
@@ -17,11 +22,18 @@ interface OnboardingState {
   formData: Record<string, unknown>;
   /** UI-only: which security sub-modal is showing. Never round-trips to the server. */
   securityCheckSubStep: SecurityCheckSubStep;
+  /**
+   * POST /finalize's response has no analog on GET /applications/{draftId},
+   * so it can't be re-derived from the server after the fact — the
+   * Confirmation screen reads it straight from here instead of a query.
+   */
+  finalizeResult: FinalizeApplicationResponse | null;
 
   setFromStartResponse: (response: StartApplicationResponse, productCode: ProductCode) => void;
   setCurrentStep: (step: DraftStep) => void;
   patchFormData: (partial: Record<string, unknown>) => void;
   setSecurityCheckSubStep: (subStep: SecurityCheckSubStep) => void;
+  setFinalizeResult: (result: FinalizeApplicationResponse) => void;
   reset: () => void;
 }
 
@@ -33,9 +45,15 @@ const INITIAL_STATE = {
   requiresSecurityCheck: false,
   formData: {},
   securityCheckSubStep: null,
+  finalizeResult: null,
 } satisfies Omit<
   OnboardingState,
-  "setFromStartResponse" | "setCurrentStep" | "patchFormData" | "setSecurityCheckSubStep" | "reset"
+  | "setFromStartResponse"
+  | "setCurrentStep"
+  | "patchFormData"
+  | "setSecurityCheckSubStep"
+  | "setFinalizeResult"
+  | "reset"
 >;
 
 export const useOnboardingStore = create<OnboardingState>()(
@@ -61,6 +79,8 @@ export const useOnboardingStore = create<OnboardingState>()(
       patchFormData: (partial) => set((state) => ({formData: {...state.formData, ...partial}})),
 
       setSecurityCheckSubStep: (subStep) => set({securityCheckSubStep: subStep}),
+
+      setFinalizeResult: (result) => set({finalizeResult: result}),
 
       reset: () => set(INITIAL_STATE),
     }),

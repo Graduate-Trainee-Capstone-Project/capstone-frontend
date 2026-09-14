@@ -1,0 +1,161 @@
+"use client";
+
+import {useState} from "react";
+import toast from "react-hot-toast";
+import {useProduct, useSaveDraft} from "@/app/_hooks";
+import {useOnboardingStore} from "@/app/_hooks/useOnboardingStore";
+import {Input} from "@/app/_components/ui/Input";
+import {Select} from "@/app/_components/ui/Select";
+import {Checkbox} from "@/app/_components/ui/Checkbox";
+import {Button} from "@/app/_components/ui/Button";
+import {Skeleton} from "@/app/_components/ui/Skeleton";
+import type {AdditionalField} from "@/app/_types";
+
+function initialValueFor(field: AdditionalField, cached: unknown): string | boolean {
+  if (field.type === "checkbox") return typeof cached === "boolean" ? cached : false;
+  return typeof cached === "string" || typeof cached === "number" ? String(cached) : "";
+}
+
+/**
+ * Generic form-builder driven entirely by product.additionalFieldsSchema —
+ * "Pension asks for employer + contribution scheme" vs "Savings asks for
+ * branch preference" is data, not a switch on productCode.
+ */
+export function ProductSpecificInfoStep() {
+  const productCode = useOnboardingStore((state) => state.productCode);
+  const draftId = useOnboardingStore((state) => state.draftId);
+  const cachedFormData = useOnboardingStore((state) => state.formData);
+  const patchFormData = useOnboardingStore((state) => state.patchFormData);
+  const setCurrentStep = useOnboardingStore((state) => state.setCurrentStep);
+
+  const {data: product, isLoading, isError} = useProduct(productCode ?? undefined);
+  const saveDraft = useSaveDraft(draftId ?? "");
+
+  const schema = product?.additionalFieldsSchema ?? [];
+
+  const [values, setValues] = useState<Record<string, string | boolean>>(() => {
+    const initial: Record<string, string | boolean> = {};
+    for (const field of schema) {
+      initial[field.field] = initialValueFor(field, cachedFormData[field.field]);
+    }
+    return initial;
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  if (!draftId) {
+    return <p className="text-sm text-error-400">Your session expired. Please start again.</p>;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-4">
+        <Skeleton className="h-11 w-full" />
+        <Skeleton className="h-11 w-full" />
+        <Skeleton className="h-11 w-32" />
+      </div>
+    );
+  }
+
+  if (isError || !product) {
+    return <p className="text-sm text-error-400">We couldn&apos;t load this product. Please go back and try again.</p>;
+  }
+
+  function updateField(field: string, value: string | boolean) {
+    setValues((prev) => ({...prev, [field]: value}));
+    setErrors((prev) => ({...prev, [field]: ""}));
+  }
+
+  function validate(): boolean {
+    const nextErrors: Record<string, string> = {};
+    for (const field of schema) {
+      if (!field.required) continue;
+      const value = values[field.field];
+      const isEmpty = field.type === "checkbox" ? value !== true : !String(value ?? "").trim();
+      if (isEmpty) nextErrors[field.field] = `${field.label} is required.`;
+    }
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  }
+
+  function handleContinue(event: React.FormEvent) {
+    event.preventDefault();
+    if (!validate()) return;
+
+    patchFormData(values);
+    saveDraft.mutate(
+      {currentStep: "DOCUMENT_UPLOAD", formData: values, channel: "WEB"},
+      {
+        onSuccess: (data) => setCurrentStep(data.currentStep),
+        onError: (error) => toast.error(error.message || "Couldn't save right now. Please try again."),
+      },
+    );
+  }
+
+  return (
+    <form onSubmit={handleContinue} className="flex flex-col gap-6">
+      <div className="flex flex-col gap-1">
+        <h2 className="text-xl font-semibold text-grey-900">{product.productName} details</h2>
+        <p className="text-sm text-grey-600">A few extra details specific to this product.</p>
+      </div>
+
+      {schema.length === 0 ? (
+        <p className="text-sm text-grey-600">Nothing else is needed for this product — you&apos;re all set.</p>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {schema.map((field) => {
+            if (field.type === "checkbox") {
+              return (
+                <div key={field.field} className="sm:col-span-2">
+                  <Checkbox
+                    label={field.label}
+                    name={field.field}
+                    checked={Boolean(values[field.field])}
+                    onChange={(e) => updateField(field.field, e.target.checked)}
+                  />
+                  {errors[field.field] && (
+                    <span className="text-xs text-error-400">{errors[field.field]}</span>
+                  )}
+                </div>
+              );
+            }
+
+            if (field.type === "select") {
+              return (
+                <Select
+                  key={field.field}
+                  label={field.label}
+                  name={field.field}
+                  placeholder={`Select ${field.label.toLowerCase()}`}
+                  options={(field.options ?? []).map((option) => ({value: option, label: option}))}
+                  value={String(values[field.field] ?? "")}
+                  onChange={(e) => updateField(field.field, e.target.value)}
+                  error={errors[field.field]}
+                  required={field.required}
+                />
+              );
+            }
+
+            return (
+              <Input
+                key={field.field}
+                label={field.label}
+                name={field.field}
+                type={field.type === "date" ? "date" : field.type === "number" ? "number" : "text"}
+                value={String(values[field.field] ?? "")}
+                onChange={(e) => updateField(field.field, e.target.value)}
+                error={errors[field.field]}
+                required={field.required}
+              />
+            );
+          })}
+        </div>
+      )}
+
+      <div className="flex justify-end">
+        <Button type="submit" isLoading={saveDraft.isPending}>
+          Continue
+        </Button>
+      </div>
+    </form>
+  );
+}
