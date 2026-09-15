@@ -155,3 +155,29 @@ export interface FinalizeApplicationResponse {
   productAccountReference: string;
   status: ApplicationStatus;
 }
+
+// ─── Cross-subsidiary "already a customer?" BVN lookup (product-agnostic) ───
+// Lets any product's identifier-capture screen offer an "ease onboarding"
+// shortcut: verify a BVN via OTP, then prefill formData from whatever
+// subsidiary the customer already has a profile with — independent of the
+// current product's own requiredIdentifiers.
+
+export interface RequestBvnOtpRequest {
+  bvn: string;
+}
+
+export interface RequestBvnOtpResponse {
+  otpToken: string;
+  maskedPhone: string;
+}
+
+export interface VerifyBvnOtpRequest {
+  otpToken: string;
+  otp: string;
+  bvn: string;
+}
+
+export interface VerifyBvnOtpResponse {
+  matched: boolean;
+  formData?: Record<string, unknown>;
+}

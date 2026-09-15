@@ -2,8 +2,9 @@
 
 @theme {
   /* === PRIMARY === */
+  --color-primary-50: #d6eaff;
   --color-primary-100: #0089ff;
-  --color-primary-400: #0033aa;
+  --color-primary-400: #0033aa; /* base */
   --color-primary-700: #0a2240;
 
   /* === SUCCESS === */

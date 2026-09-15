@@ -5,6 +5,8 @@ import type {
   FinalizeApplicationResponse,
   Product,
   ProductsResponse,
+  RequestBvnOtpRequest,
+  RequestBvnOtpResponse,
   SaveDraftRequest,
   SaveDraftResponse,
   SecurityCheckQuestionsResponse,
@@ -13,6 +15,8 @@ import type {
   SecurityCheckType,
   StartApplicationRequest,
   StartApplicationResponse,
+  VerifyBvnOtpRequest,
+  VerifyBvnOtpResponse,
 } from "@/app/_types";
 import {
   DraftRecord,
@@ -26,6 +30,14 @@ import {
   toApplicationDraftResponse,
 } from "@/app/_lib/mocks/data";
 import {SECURITY_CHECK_MAX_ATTEMPTS} from "@/app/_constants";
+
+/**
+ * In-memory OTP tokens issued by mockRequestBvnOtp, keyed by otpToken.
+ * Demo-only: the "OTP" is always "0000" so the flow is reachable without a
+ * real SMS gateway — mirrors how mockSubmitSecurityCheck fakes verification.
+ */
+const mockBvnOtpTokens = new Map<string, {bvn: string; expiresAt: number}>();
+const DEMO_OTP = "0000";
 
 /** Simulated network latency so loading states are visible during the demo. */
 function delay(ms = 450): Promise<void> {
@@ -309,6 +321,72 @@ export async function mockSubmitSecurityCheck(
   }
 
   return {data: {checkType, status: "PASSED"}, status: 200};
+}
+
+// ─── POST /existing-customer/bvn-otp/request ───
+// Product-agnostic: any apply flow can offer "already a customer?" and this
+// endpoint doesn't care which product the caller started from.
+
+export async function mockRequestBvnOtp(
+  input: RequestBvnOtpRequest,
+): Promise<ApiResult<RequestBvnOtpResponse>> {
+  await delay(500);
+  const bvn = input.bvn.trim();
+  if (!/^\d{11}$/.test(bvn)) {
+    return {
+      error: "BVN must be exactly 11 digits.",
+      errorCode: "VALIDATION_ERROR",
+      errorField: "bvn",
+      status: 400,
+    };
+  }
+
+  const otpToken = generateId("otp");
+  mockBvnOtpTokens.set(otpToken, {bvn, expiresAt: Date.now() + 5 * 60 * 1000});
+
+  return {
+    data: {otpToken, maskedPhone: "+234 80** ***" + bvn.slice(-2)},
+    status: 200,
+  };
+}
+
+// ─── POST /existing-customer/bvn-otp/verify ───
+// On success, looks the BVN up in the same customer-keyed identifier index
+// used by mockStartApplication — that index isn't scoped to a product, so a
+// match here can come from Bank, Pension, or Stockbroking alike.
+
+export async function mockVerifyBvnOtp(
+  input: VerifyBvnOtpRequest,
+): Promise<ApiResult<VerifyBvnOtpResponse>> {
+  await delay(500);
+  const record = mockBvnOtpTokens.get(input.otpToken);
+  if (!record || record.bvn !== input.bvn.trim() || record.expiresAt < Date.now()) {
+    return {
+      error: "This code has expired. Please request a new one.",
+      errorCode: "VALIDATION_ERROR",
+      errorField: "otp",
+      status: 400,
+    };
+  }
+
+  // Demo-friendly fixed OTP, same pattern as mockSubmitSecurityCheck.
+  if (input.otp.trim() !== DEMO_OTP) {
+    return {
+      error: "Incorrect code. Please try again.",
+      errorCode: "VALIDATION_ERROR",
+      errorField: "otp",
+      status: 400,
+    };
+  }
+
+  mockBvnOtpTokens.delete(input.otpToken);
+
+  const matched = mockIdentifierIndex.get(identifierKey("BVN", record.bvn));
+  if (!matched) {
+    return {data: {matched: false}, status: 200};
+  }
+
+  return {data: {matched: true, formData: matched.formData}, status: 200};
 }
 
 // ─── POST /applications/{draftId}/finalize ───

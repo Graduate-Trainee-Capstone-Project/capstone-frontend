@@ -7,6 +7,7 @@ import {useOnboardingStore} from "@/app/_hooks/useOnboardingStore";
 import {Button} from "@/app/_components/ui/Button";
 import {Checkbox} from "@/app/_components/ui/Checkbox";
 import {Skeleton} from "@/app/_components/ui/Skeleton";
+import {PRODUCT_DOCUMENT_SLOTS} from "@/app/_constants";
 
 interface SummaryRow {
   label: string;
@@ -82,8 +83,9 @@ export function ReviewStep() {
       return {label: field.label, value};
     })
     .filter((row): row is SummaryRow => row !== null);
+  const documentSlots = productCode ? PRODUCT_DOCUMENT_SLOTS[productCode] : [];
   const documentRows = rowsFrom(
-    {idDocumentName: "Government-issued ID", passportPhotoName: "Passport photograph"},
+    Object.fromEntries(documentSlots.map((slot) => [slot.key, slot.label])),
     formData,
   );
 

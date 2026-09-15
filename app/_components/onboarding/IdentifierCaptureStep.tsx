@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import {ApiRequestError, useProduct, useStartApplication} from "@/app/_hooks";
 import {useOnboardingStore} from "@/app/_hooks/useOnboardingStore";
 import {IdentifierField} from "@/app/_components/onboarding/IdentifierField";
+import {ExistingCustomerBanner} from "@/app/_components/onboarding/ExistingCustomerBanner";
 import {Button} from "@/app/_components/ui/Button";
 import {Skeleton} from "@/app/_components/ui/Skeleton";
 import {normalizePhone, validateIdentifier} from "@/app/_utils/validators";
@@ -18,6 +19,7 @@ export function IdentifierCaptureStep({productCode}: IdentifierCaptureStepProps)
   const {data: product, isLoading, isError} = useProduct(productCode);
   const startApplication = useStartApplication();
   const setFromStartResponse = useOnboardingStore((state) => state.setFromStartResponse);
+  const patchFormData = useOnboardingStore((state) => state.patchFormData);
 
   const [values, setValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -95,6 +97,8 @@ export function IdentifierCaptureStep({productCode}: IdentifierCaptureStepProps)
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      <ExistingCustomerBanner onPrefilled={patchFormData} />
+
       <div className="flex flex-col gap-1">
         <h2 className="text-xl font-semibold text-grey-900">{product.productName}</h2>
         <p className="text-sm text-grey-600">
