@@ -22,8 +22,6 @@ export type SecurityCheckType = "SECURITY_QUESTION" | "FACIAL_RECOGNITION" | "OT
 
 export type SecurityCheckStatus = "PENDING" | "PASSED" | "FAILED";
 
-export type ApplicationStatus = "ACTIVE" | "PENDING";
-
 // ─── Error shape (every error response follows this) ───
 
 export type ApiErrorCode =
@@ -67,6 +65,63 @@ export interface Product {
   additionalFieldsSchema: AdditionalField[];
 }
 
+// ─── DraftFormData — BE's persisted shape (SaveDraftRequest.formData /
+// StartApplicationResponse.formData / ApplicationDraftResponse.formData).
+// Known BE-typed fields only, per DraftFormData DTO. The index signature
+// keeps room for product-schema fields (employerName, contributionScheme,
+// bankAccountOption, ...) and nextOfKin that FE still collects locally but
+// BE does not yet persist — see docs/justin-backend-alignment-briefing.md B4. ───
+
+export interface AddressInfo {
+  houseNumber?: string;
+  street?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+}
+
+export interface NextOfKinInfo {
+  fullName?: string;
+  relationship?: string;
+  phone?: string;
+}
+
+export interface DraftFormData {
+  firstName?: string;
+  middleName?: string;
+  lastName?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  email?: string;
+  phoneNumber?: string;
+  address?: AddressInfo[];
+  accountType?: string;
+  initialDeposit?: number;
+  currency?: string;
+  preferredBranch?: string;
+  checkBookRequested?: boolean;
+  documents?: DraftDocument[];
+  nationality?: string;
+  /** FE-only — BE has no NOK field yet; sent but ignored until BE adds it. */
+  nextOfKin?: NextOfKinInfo;
+  /** FE-only product-schema extras (title, employerName, ...) — BE ignores unknown keys. */
+  [key: string]: unknown;
+}
+
+// ─── existingCustomer on POST /applications/start response ───
+
+export interface ExistingCustomerData {
+  firstName: string;
+  middleName?: string | null;
+  lastName: string;
+  dateOfBirth?: string | null;
+  gender?: string | null;
+  phoneNumber?: string | null;
+  email?: string | null;
+  /** A single street-address string, not our {street, city, state} shape. */
+  address?: string | null;
+}
+
 // ─── POST /applications/start ───
 
 export interface StartApplicationRequest {
@@ -82,27 +137,71 @@ export interface StartApplicationResponse {
   isExistingCustomer: boolean;
   requiresSecurityCheck: boolean;
   currentStep: DraftStep;
-  formData: Record<string, unknown>;
+  formData: DraftFormData;
+  /** New existing-customer start: formData is empty and the profile lands here instead. */
+  existingCustomer: ExistingCustomerData | null;
 }
 
 // ─── GET /applications/{draftId} ───
+// No productCode, no isExistingCustomer, no customerId (commented out in the
+// BE mapper) on this response — productCode is kept from the URL / Zustand
+// store instead. See docs/justin-backend-alignment-briefing.md B3.
 
 export interface ApplicationDraftResponse {
   draftId: string;
-  productCode: ProductCode;
+  /** Guid — not a ProductCode. Cross-reference against the store's productCode. */
+  productId: string;
+  primaryIdentifierType: IdentifierType;
+  secondaryIdentifierType?: IdentifierType | null;
   currentStep: DraftStep;
-  formData: Record<string, unknown>;
-  isExistingCustomer: boolean;
+  formData: DraftFormData;
+  channel: Channel;
   status: DraftStatus;
+  createdAt: string;
   lastUpdatedAt: string;
+  expiresAt: string;
 }
 
 // ─── PUT /applications/{draftId}/save ───
+// multipart/form-data, FLAT fields — not JSON, no nested `formData` wrapper.
+// BE switched this endpoint from [FromBody] JSON to [Consumes("multipart/
+// form-data")] [FromForm] on 2026-09-16 (commit cbd5d75) to support real
+// document uploads. Field names match OnboardingPlatform.Core.DTOs.Requests.
+// SaveDraftRequest exactly (case-insensitive on the wire, ASP.NET form
+// binder default). Each save only carries the fields relevant to the
+// current screen — BE null-coalesces per field against the stored record,
+// EXCEPT Address and Documents, which it replaces wholesale whenever
+// `street`/`documentFile` is present — see B4 in the briefing and
+// justin-backend-alignment-briefing.md for the address-array caveat this
+// superseded, plus the still-open BE bug where Documents has no append,
+// only wholesale replace (one file survives per call).
 
 export interface SaveDraftRequest {
   currentStep: DraftStep;
-  formData: Record<string, unknown>;
   channel: Channel;
+  firstName?: string;
+  middleName?: string;
+  lastName?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  email?: string;
+  phoneNumber?: string;
+  accountType?: string;
+  initialDeposit?: number;
+  currency?: string;
+  preferredBranch?: string;
+  checkBookRequested?: boolean;
+  houseNumber?: string;
+  street?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  /** BE labels the file by this on save — we use the slot's label, e.g. "Government-issued ID". */
+  documentType?: string;
+  /** A real binary upload — BE only accepts ONE per save call. */
+  documentFile?: File;
+  /** BE has no column for this yet — sent as a harmless extra field, same as any other unknown key. */
+  [key: string]: unknown;
 }
 
 export interface SaveDraftResponse {
@@ -147,7 +246,8 @@ export interface FinalizeApplicationResponse {
   customerId: string;
   customerProductId: string;
   productAccountReference: string;
-  status: ApplicationStatus;
+  /** BE sends CustomerProductStatus.ToString() — "ACTIVE", "PENDING", "REJECTED", "CLOSED", ... */
+  status: string;
 }
 
 // ─── POST /customers/lookup ───

@@ -1,6 +1,6 @@
-"use server";
+'use server';
 
-import {apiRequest} from "@/app/_lib";
+import { apiRequest } from '@/app/_lib';
 import {
   mockFinalizeApplication,
   mockGetApplication,
@@ -10,7 +10,7 @@ import {
   mockSaveDraft,
   mockStartApplication,
   mockSubmitSecurityCheck,
-} from "@/app/_lib/mocks/handlers";
+} from '@/app/_lib/mocks/handlers';
 import type {
   ApiResult,
   ApplicationDraftResponse,
@@ -25,7 +25,7 @@ import type {
   SecurityCheckResponse,
   StartApplicationRequest,
   StartApplicationResponse,
-} from "@/app/_types";
+} from '@/app/_types';
 
 /**
  * Every action here returns an ApiResult<T> ({ data } | { error, errorCode })
@@ -36,30 +36,52 @@ import type {
  * MOCKS_ENABLED: when MOCK_MODE=true (or API_URL is still a placeholder),
  * catalog/draft actions route to the in-memory mock layer.
  *
- * MOCK_SECURITY_CHECK: security questions + submit stay mocked even against
- * a live API until BE wires those routes. Set MOCK_SECURITY_CHECK=false to
- * hit GET/POST /applications/{draftId}/security-check...
+ * Security-check questions + submit are ALWAYS mocked, regardless of
+ * MOCKS_ENABLED — same as OTP. BE has no working route for these yet (only
+ * a GET of past checks, no way to fetch questions; see B6 in
+ * docs/justin-backend-alignment-briefing.md), so unlike every other action
+ * here there is no live branch to fall back to.
  *
  * Customer lookup is never mocked — OTP is client-side; the lookup itself
  * must hit the real store so created customers can be found.
  */
 const MOCKS_ENABLED =
-  process.env.MOCK_MODE === "true" ||
-  (process.env.MOCK_MODE !== "false" &&
-    (!process.env.API_URL || process.env.API_URL.includes("api.example.com")));
+  process.env.MOCK_MODE === 'true' ||
+  (process.env.MOCK_MODE !== 'false' &&
+    (!process.env.API_URL || process.env.API_URL.includes('api.example.com')));
 
-const MOCK_SECURITY_CHECK = MOCKS_ENABLED || process.env.MOCK_SECURITY_CHECK !== "false";
+/**
+ * BE's /save is multipart/form-data with flat fields, not JSON (see
+ * SaveDraftRequest in _types). Every entry gets appended as-is: a File
+ * instance keeps its filename, everything else is stringified. undefined/
+ * null/"" are skipped so an unset field never overwrites what's already
+ * saved — BE null-coalesces per field against the stored record.
+ */
+function buildSaveDraftFormData(input: SaveDraftRequest): FormData {
+  const formData = new FormData();
+  for (const [key, value] of Object.entries(input)) {
+    if (value === undefined || value === null || value === '') continue;
+    if (value instanceof File) {
+      formData.append(key, value, value.name);
+      continue;
+    }
+    formData.append(key, String(value));
+  }
+  return formData;
+}
 
 // GET /products
 export async function getProductsAction(): Promise<ApiResult<Product[]>> {
   if (MOCKS_ENABLED) return mockGetProducts();
-  return apiRequest.get<Product[]>("/products");
+  return apiRequest.get<Product[]>('/products');
 }
 
-// GET /products/{productCode}
-export async function getProductAction(productCode: string): Promise<ApiResult<Product>> {
+// GET /products/by/{productCode}
+export async function getProductAction(
+  productCode: string,
+): Promise<ApiResult<Product>> {
   if (MOCKS_ENABLED) return mockGetProduct(productCode);
-  return apiRequest.get<Product>(`/products/${productCode}`);
+  return apiRequest.get<Product>(`/products/by/${productCode}`);
 }
 
 // POST /applications/start
@@ -67,7 +89,10 @@ export async function startApplicationAction(
   input: StartApplicationRequest,
 ): Promise<ApiResult<StartApplicationResponse>> {
   if (MOCKS_ENABLED) return mockStartApplication(input);
-  return apiRequest.post<StartApplicationResponse>("/applications/start", input);
+  return apiRequest.post<StartApplicationResponse>(
+    '/applications/start',
+    input,
+  );
 }
 
 // GET /applications/{draftId}
@@ -78,32 +103,31 @@ export async function getApplicationAction(
   return apiRequest.get<ApplicationDraftResponse>(`/applications/${draftId}`);
 }
 
-// PUT /applications/{draftId}/save
+// PUT /applications/{draftId}/save — multipart/form-data, flat fields.
 export async function saveDraftAction(
   draftId: string,
   input: SaveDraftRequest,
 ): Promise<ApiResult<SaveDraftResponse>> {
   if (MOCKS_ENABLED) return mockSaveDraft(draftId, input);
-  return apiRequest.put<SaveDraftResponse>(`/applications/${draftId}/save`, input);
-}
-
-// GET /applications/{draftId}/security-check/questions
-export async function getSecurityCheckQuestionsAction(
-  draftId: string,
-): Promise<ApiResult<SecurityCheckQuestionsResponse>> {
-  if (MOCK_SECURITY_CHECK) return mockGetSecurityCheckQuestions(draftId);
-  return apiRequest.get<SecurityCheckQuestionsResponse>(
-    `/applications/${draftId}/security-check/questions`,
+  return apiRequest.putForm<SaveDraftResponse>(
+    `/applications/${draftId}/save`,
+    buildSaveDraftFormData(input),
   );
 }
 
-// POST /applications/{draftId}/security-check
+// GET /applications/{draftId}/security-check/questions — always mocked, see note above.
+export async function getSecurityCheckQuestionsAction(
+  draftId: string,
+): Promise<ApiResult<SecurityCheckQuestionsResponse>> {
+  return mockGetSecurityCheckQuestions(draftId);
+}
+
+// POST /applications/{draftId}/security-check — always mocked, see note above.
 export async function submitSecurityCheckAction(
   draftId: string,
   input: SecurityCheckRequest,
 ): Promise<ApiResult<SecurityCheckResponse>> {
-  if (MOCK_SECURITY_CHECK) return mockSubmitSecurityCheck(draftId, input);
-  return apiRequest.post<SecurityCheckResponse>(`/applications/${draftId}/security-check`, input);
+  return mockSubmitSecurityCheck(draftId, input);
 }
 
 // POST /applications/{draftId}/finalize
@@ -111,12 +135,15 @@ export async function finalizeApplicationAction(
   draftId: string,
 ): Promise<ApiResult<FinalizeApplicationResponse>> {
   if (MOCKS_ENABLED) return mockFinalizeApplication(draftId);
-  return apiRequest.post<FinalizeApplicationResponse>(`/applications/${draftId}/finalize`, {});
+  return apiRequest.post<FinalizeApplicationResponse>(
+    `/applications/${draftId}/finalize`,
+    {},
+  );
 }
 
 // POST /customers/lookup — never mocked. See docs/customer-lookup-contract.md.
 export async function lookupCustomerAction(
   input: LookupCustomerRequest,
 ): Promise<ApiResult<LookupCustomerResponse>> {
-  return apiRequest.post<LookupCustomerResponse>("/customers/lookup", input);
+  return apiRequest.post<LookupCustomerResponse>('/customers/lookup', input);
 }

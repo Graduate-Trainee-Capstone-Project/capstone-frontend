@@ -15,20 +15,44 @@ if (!API_URL && process.env.NODE_ENV !== "production") {
 
 type Body = object | undefined;
 
+/** Debug-friendly stringification — FormData doesn't log usefully as-is (File entries especially). */
+function describeBody(body: RequestInit["body"]): unknown {
+  if (body instanceof FormData) {
+    const entries: Record<string, unknown> = {};
+    for (const [key, value] of body.entries()) {
+      entries[key] = value instanceof File ? `File(${value.name}, ${value.size}b, ${value.type})` : value;
+    }
+    return entries;
+  }
+  return body ?? "(no body)";
+}
+
 async function baseRequest<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResult<T>> {
   let response: Response;
+  const method = options.method ?? "GET";
+  const isFormData = options.body instanceof FormData;
+
+  // TEMP DEBUG — remove once the BE PUT /applications/{id}/save contract
+  // (multipart/form-data, flat fields — see SaveDraftRequest in _types) is
+  // confirmed stable end-to-end. See docs/justin-backend-alignment-briefing.md.
+  console.log(`[apiRequest] → ${method} ${endpoint}`, describeBody(options.body));
 
   try {
     response = await fetch(`${API_URL}${endpoint}`, {
       ...options,
       headers: {
-        "Content-Type": "application/json",
+        // A FormData body must NOT get an explicit Content-Type — fetch sets
+        // multipart/form-data with the correct boundary itself; overriding
+        // it here (even to the same value) drops the boundary and the BE
+        // form binder gets nothing.
+        ...(isFormData ? {} : {"Content-Type": "application/json"}),
         ...(options.headers || {}),
       },
       // Every call here is form-wizard state — never cache.
       cache: "no-store",
     });
-  } catch {
+  } catch (err) {
+    console.log(`[apiRequest] ✘ ${method} ${endpoint} — fetch threw`, err);
     // Network failure (backend down, DNS, etc.) — no response to parse.
     return {
       error: "Could not reach the server. Check your connection and try again.",
@@ -38,6 +62,7 @@ async function baseRequest<T>(endpoint: string, options: RequestInit = {}): Prom
   }
 
   const data = await response.json().catch(() => null);
+  console.log(`[apiRequest] ← ${response.status} ${method} ${endpoint}`, data);
 
   if (!response.ok) {
     const errorMessage: string =
@@ -71,6 +96,10 @@ export const apiRequest = Object.assign(
         method: "PUT",
         body: JSON.stringify(body ?? {}),
       }),
+
+    // multipart/form-data PUT — only /applications/{draftId}/save needs this.
+    putForm: <T>(endpoint: string, formData: FormData) =>
+      baseRequest<T>(endpoint, {method: "PUT", body: formData}),
 
     delete: <T>(endpoint: string) => baseRequest<T>(endpoint, {method: "DELETE"}),
   },

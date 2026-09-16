@@ -45,17 +45,3 @@ export function documentsFromCache(
   return initial;
 }
 
-export function toDocumentsPayload(
-  names: Record<string, string>,
-  slots: DocumentSlotConfig[],
-): {documents: DraftDocument[]} {
-  return {
-    documents: slots
-      .filter((slot) => names[slot.key]?.trim())
-      .map((slot) => ({type: slot.label, url: names[slot.key]})),
-  };
-}
-
-export function withDefaultNationality(formData: Record<string, unknown>): Record<string, unknown> {
-  return {...formData, nationality: "Nigerian"};
-}

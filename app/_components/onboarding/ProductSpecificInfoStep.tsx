@@ -13,11 +13,25 @@ import {Skeleton} from "@/app/_ui/Skeleton";
 import {debounce} from "@/app/_utils/debounce";
 import {readSchemaField, toBackendProductFormData} from "@/app/_utils/formData";
 import {AUTOSAVE_DEBOUNCE_MS, ROUTES} from "@/app/_constants";
-import type {AdditionalField} from "@/app/_types";
+import type {AdditionalField, DraftStep, SaveDraftRequest} from "@/app/_types";
 
 function initialValueFor(field: AdditionalField, cached: unknown): string | boolean {
   if (field.type === "checkbox") return typeof cached === "boolean" ? cached : false;
   return typeof cached === "string" || typeof cached === "number" ? String(cached) : "";
+}
+
+/**
+ * BE's flat SaveDraftRequest only recognizes preferredBranch/checkBookRequested
+ * from this screen (mapped by toBackendProductFormData); other schema fields
+ * (title, employerName, ...) ride along as harmless extra form fields the BE
+ * form binder ignores — see B4 in the briefing.
+ */
+function toSavePayload(values: Record<string, string | boolean>, currentStep: DraftStep): SaveDraftRequest {
+  return {
+    currentStep,
+    channel: "WEB",
+    ...toBackendProductFormData(values),
+  };
 }
 
 /**
@@ -41,7 +55,13 @@ export function ProductSpecificInfoStep() {
 
   const [values, setValues] = useState<Record<string, string | boolean>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const pendingChangesRef = useRef<Record<string, unknown>>({});
+
+  // Mirrors `values` so the debounced autosave closure always reads the
+  // LATEST fields rather than whatever was current when it was created.
+  const valuesRef = useRef(values);
+  useEffect(() => {
+    valuesRef.current = values;
+  }, [values]);
 
   useEffect(() => {
     const fields = product?.additionalFieldsSchema;
@@ -57,18 +77,24 @@ export function ProductSpecificInfoStep() {
     });
   }, [product, cachedFormData]);
 
-  const debouncedAutosaveRef = useRef<() => void>(() => {});
+  // Set once Continue / Save-and-continue-later has fired its own save —
+  // guards the debounce, not just cancels it once: a submit button stays
+  // focused after being clicked, and unmounting this form right after a
+  // successful transition fires a FRESH blur on it, re-arming the debounce
+  // AFTER the explicit cancel() below already ran. See the matching comment
+  // in PersonalInfoStep for the full failure mode this prevents.
+  const committedRef = useRef(false);
+
+  // Always sends the FULL current snapshot, never a delta — consistent with
+  // PersonalInfoStep, and avoids ever depending on BE's per-field merge for
+  // fields it may not even recognize.
+  const debouncedAutosaveRef = useRef<(() => void) & {cancel?: () => void}>(() => {});
   useEffect(() => {
     debouncedAutosaveRef.current = debounce(() => {
-      const changes = pendingChangesRef.current;
-      if (Object.keys(changes).length === 0 || !draftId) return;
-      pendingChangesRef.current = {};
-      patchFormData(changes);
-      saveDraft.mutate({
-        currentStep: "PRODUCT_SPECIFIC_INFO",
-        formData: toBackendProductFormData(changes),
-        channel: "WEB",
-      });
+      if (!draftId || committedRef.current) return;
+      const snapshot = valuesRef.current;
+      patchFormData(snapshot);
+      saveDraft.mutate(toSavePayload(snapshot, "PRODUCT_SPECIFIC_INFO"));
     }, AUTOSAVE_DEBOUNCE_MS);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftId]);
@@ -94,18 +120,10 @@ export function ProductSpecificInfoStep() {
   function updateField(field: string, value: string | boolean) {
     setValues((prev) => ({...prev, [field]: value}));
     setErrors((prev) => ({...prev, [field]: ""}));
-    pendingChangesRef.current = {...pendingChangesRef.current, [field]: value};
   }
 
   function handleBlur() {
     debouncedAutosaveRef.current();
-  }
-
-  function flushPendingChangesNow(): Record<string, unknown> {
-    const changes = pendingChangesRef.current;
-    pendingChangesRef.current = {};
-    if (Object.keys(changes).length > 0) patchFormData(changes);
-    return changes;
   }
 
   function validate(): boolean {
@@ -121,41 +139,30 @@ export function ProductSpecificInfoStep() {
   }
 
   function handleSaveAndContinueLater() {
-    const changes = flushPendingChangesNow();
-    saveDraft.mutate(
-      {
-        currentStep: "PRODUCT_SPECIFIC_INFO",
-        formData: toBackendProductFormData(changes),
-        channel: "WEB",
+    committedRef.current = true;
+    debouncedAutosaveRef.current.cancel?.();
+    patchFormData(values);
+    saveDraft.mutate(toSavePayload(values, "PRODUCT_SPECIFIC_INFO"), {
+      onSuccess: () => {
+        toast.success("Saved — come back anytime with your details to pick up where you left off.");
+        resetStore();
+        router.push(ROUTES.home);
       },
-      {
-        onSuccess: () => {
-          toast.success("Saved — come back anytime with your details to pick up where you left off.");
-          resetStore();
-          router.push(ROUTES.home);
-        },
-        onError: (error) => toast.error(error.message || "Couldn't save right now. Please try again."),
-      },
-    );
+      onError: (error) => toast.error(error.message || "Couldn't save right now. Please try again."),
+    });
   }
 
   function handleContinue(event: React.FormEvent) {
     event.preventDefault();
     if (!validate()) return;
 
-    const changes = flushPendingChangesNow();
+    committedRef.current = true;
+    debouncedAutosaveRef.current.cancel?.();
     patchFormData(values);
-    saveDraft.mutate(
-      {
-        currentStep: "DOCUMENT_UPLOAD",
-        formData: toBackendProductFormData({...values, ...changes}),
-        channel: "WEB",
-      },
-      {
-        onSuccess: (data) => setCurrentStep(data.currentStep),
-        onError: (error) => toast.error(error.message || "Couldn't save right now. Please try again."),
-      },
-    );
+    saveDraft.mutate(toSavePayload(values, "DOCUMENT_UPLOAD"), {
+      onSuccess: (data) => setCurrentStep(data.currentStep),
+      onError: (error) => toast.error(error.message || "Couldn't save right now. Please try again."),
+    });
   }
 
   return (

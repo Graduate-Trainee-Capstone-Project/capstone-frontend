@@ -72,7 +72,10 @@ export function ReviewStep() {
   }
 
   const personalRows = rowsFrom(PERSONAL_LABELS, formData);
-  const addressRows = rowsFrom({street: "Street", city: "City", state: "State"}, (formData.address as Record<string, unknown>) ?? {});
+  const addressRows = rowsFrom(
+    {street: "Street", city: "City", state: "State"},
+    (formData.address?.[0] as unknown as Record<string, unknown>) ?? {},
+  );
   const nextOfKinRows = rowsFrom(
     {fullName: "Full name", relationship: "Relationship", phone: "Phone"},
     (formData.nextOfKin as Record<string, unknown>) ?? {},

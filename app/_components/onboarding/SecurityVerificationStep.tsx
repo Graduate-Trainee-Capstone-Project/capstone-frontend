@@ -4,13 +4,15 @@ import {useState} from "react";
 import {useSaveDraft} from "@/app/_hooks";
 import {useOnboardingStore} from "@/app/_hooks/useOnboardingStore";
 import {Modal} from "@/app/_ui/Modal";
+import {OtpVerificationModal} from "@/app/_components/onboarding/OtpVerificationModal";
 import {SecurityQuestionModal} from "@/app/_components/onboarding/SecurityQuestionModal";
 import {FacialCaptureModal} from "@/app/_components/onboarding/FacialCaptureModal";
 
 /**
  * Existing customers only — fires whenever requiresSecurityCheck came back
- * true from /start, never based on productCode. Two sub-modals must both
- * PASS before we advance past this screen.
+ * true from /start, never based on productCode. Three sub-modals, in order
+ * (OTP → security questions → facial), must all PASS before we advance past
+ * this screen.
  */
 export function SecurityVerificationStep() {
   const draftId = useOnboardingStore((state) => state.draftId);
@@ -38,8 +40,13 @@ export function SecurityVerificationStep() {
 
   function handleFacialPassed() {
     setSecurityCheckSubStep(null);
+    // PERSONAL_INFO, not PRODUCT_SPECIFIC_INFO — existing customers still
+    // need to land on the (prefilled) KYC form so their existing data
+    // actually gets reviewed and saved to this draft. Skipping straight to
+    // product info meant existingCustomer's prefill sat in the local store
+    // only and was never persisted.
     saveDraft.mutate(
-      {currentStep: "PRODUCT_SPECIFIC_INFO", formData: {}, channel: "WEB"},
+      {currentStep: "PERSONAL_INFO", channel: "WEB"},
       {onSuccess: (data) => setCurrentStep(data.currentStep)},
     );
   }
@@ -50,6 +57,10 @@ export function SecurityVerificationStep() {
         <h2 className="text-xl font-semibold text-grey-900">Verify it&apos;s you</h2>
         <p className="text-sm text-grey-600">We found an existing profile — a quick check keeps it secure.</p>
       </div>
+
+      <Modal isOpen={securityCheckSubStep === "OTP"} title="Enter one-time code" dismissible={false}>
+        <OtpVerificationModal onPassed={() => setSecurityCheckSubStep("SECURITY_QUESTION")} />
+      </Modal>
 
       <Modal isOpen={securityCheckSubStep === "SECURITY_QUESTION"} title="Security questions" dismissible={false}>
         <SecurityQuestionModal
