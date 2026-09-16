@@ -2,7 +2,7 @@
 
 import type {ButtonHTMLAttributes, ReactNode} from "react";
 import {cn} from "@/app/_utils/cn";
-import {Spinner} from "@/app/_components/ui/Spinner";
+import {Spinner} from "@/app/_ui/Spinner";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 type Size = "sm" | "md" | "lg";

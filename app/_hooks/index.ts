@@ -7,15 +7,19 @@ import {
   getProductAction,
   getProductsAction,
   getSecurityCheckQuestionsAction,
+  requestBvnOtpAction,
   saveDraftAction,
   startApplicationAction,
   submitSecurityCheckAction,
+  verifyBvnOtpAction,
 } from "@/app/_lib/actions";
 import type {
   ApiResult,
+  RequestBvnOtpRequest,
   SaveDraftRequest,
   SecurityCheckRequest,
   StartApplicationRequest,
+  VerifyBvnOtpRequest,
 } from "@/app/_types";
 
 /**
@@ -157,5 +161,21 @@ export function useFinalizeApplication(draftId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({queryKey: onboardingKeys.draft(draftId)});
     },
+  });
+}
+
+// ─── POST /existing-customer/bvn-otp/request, /verify ───
+// Product-agnostic "already a customer?" shortcut — usable from any apply
+// flow's identifier-capture screen, not tied to a productCode query key.
+
+export function useRequestBvnOtp() {
+  return useMutation({
+    mutationFn: async (input: RequestBvnOtpRequest) => unwrap(await requestBvnOtpAction(input)),
+  });
+}
+
+export function useVerifyBvnOtp() {
+  return useMutation({
+    mutationFn: async (input: VerifyBvnOtpRequest) => unwrap(await verifyBvnOtpAction(input)),
   });
 }

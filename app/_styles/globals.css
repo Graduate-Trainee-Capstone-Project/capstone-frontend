@@ -2,9 +2,15 @@
 
 @theme {
   /* === PRIMARY === */
+  --color-primary-50: #d6eaff;
+  --color-primary-75: #e8eeff;
+  --color-primary-90: #f0f3ff;
   --color-primary-100: #0089ff;
-  --color-primary-400: #0033aa;
+  --color-primary-300: #0074da;
+  --color-primary-400: #0033aa; /* base */
+  --color-primary-500: #005cae;
   --color-primary-700: #0a2240;
+  --color-primary-900: #000b1f;
 
   /* === SUCCESS === */
   --color-success-50: #e7f6ec;

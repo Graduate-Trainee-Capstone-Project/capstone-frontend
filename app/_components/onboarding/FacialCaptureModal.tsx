@@ -2,8 +2,8 @@
 
 import {useEffect, useRef, useState} from "react";
 import {ApiRequestError, useSubmitSecurityCheck} from "@/app/_hooks";
-import {Button} from "@/app/_components/ui/Button";
-import {Spinner} from "@/app/_components/ui/Spinner";
+import {Button} from "@/app/_ui/Button";
+import {Spinner} from "@/app/_ui/Spinner";
 
 interface FacialCaptureModalProps {
   draftId: string;

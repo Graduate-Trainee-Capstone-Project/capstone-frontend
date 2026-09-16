@@ -11,7 +11,7 @@ import {ProductSpecificInfoStep} from "@/app/_components/onboarding/ProductSpeci
 import {DocumentUploadStep} from "@/app/_components/onboarding/DocumentUploadStep";
 import {ReviewStep} from "@/app/_components/onboarding/ReviewStep";
 import {ConfirmationStep} from "@/app/_components/onboarding/ConfirmationStep";
-import {Skeleton} from "@/app/_components/ui/Skeleton";
+import {Skeleton} from "@/app/_ui/Skeleton";
 import type {ProductCode} from "@/app/_types";
 
 interface ApplyProductClientProps {

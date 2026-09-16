@@ -2,9 +2,9 @@
 
 import {useState} from "react";
 import {ApiRequestError, useSecurityCheckQuestions, useSubmitSecurityCheck} from "@/app/_hooks";
-import {Input} from "@/app/_components/ui/Input";
-import {Button} from "@/app/_components/ui/Button";
-import {Skeleton} from "@/app/_components/ui/Skeleton";
+import {Input} from "@/app/_ui/Input";
+import {Button} from "@/app/_ui/Button";
+import {Skeleton} from "@/app/_ui/Skeleton";
 
 interface SecurityQuestionModalProps {
   draftId: string;

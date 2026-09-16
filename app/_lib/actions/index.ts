@@ -7,9 +7,11 @@ import {
   mockGetProduct,
   mockGetProducts,
   mockGetSecurityCheckQuestions,
+  mockRequestBvnOtp,
   mockSaveDraft,
   mockStartApplication,
   mockSubmitSecurityCheck,
+  mockVerifyBvnOtp,
 } from "@/app/_lib/mocks/handlers";
 import type {
   ApiResult,
@@ -17,6 +19,8 @@ import type {
   FinalizeApplicationResponse,
   Product,
   ProductsResponse,
+  RequestBvnOtpRequest,
+  RequestBvnOtpResponse,
   SaveDraftRequest,
   SaveDraftResponse,
   SecurityCheckQuestionsResponse,
@@ -24,6 +28,8 @@ import type {
   SecurityCheckResponse,
   StartApplicationRequest,
   StartApplicationResponse,
+  VerifyBvnOtpRequest,
+  VerifyBvnOtpResponse,
 } from "@/app/_types";
 
 /**
@@ -109,4 +115,20 @@ export async function finalizeApplicationAction(
 ): Promise<ApiResult<FinalizeApplicationResponse>> {
   if (MOCKS_ENABLED) return mockFinalizeApplication(draftId);
   return apiRequest.post<FinalizeApplicationResponse>(`/applications/${draftId}/finalize`, {});
+}
+
+// POST /existing-customer/bvn-otp/request — product-agnostic cross-subsidiary lookup, step 1.
+export async function requestBvnOtpAction(
+  input: RequestBvnOtpRequest,
+): Promise<ApiResult<RequestBvnOtpResponse>> {
+  if (MOCKS_ENABLED) return mockRequestBvnOtp(input);
+  return apiRequest.post<RequestBvnOtpResponse>("/existing-customer/bvn-otp/request", input);
+}
+
+// POST /existing-customer/bvn-otp/verify — step 2, returns matched profile formData if found.
+export async function verifyBvnOtpAction(
+  input: VerifyBvnOtpRequest,
+): Promise<ApiResult<VerifyBvnOtpResponse>> {
+  if (MOCKS_ENABLED) return mockVerifyBvnOtp(input);
+  return apiRequest.post<VerifyBvnOtpResponse>("/existing-customer/bvn-otp/verify", input);
 }

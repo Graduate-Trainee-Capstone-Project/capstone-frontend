@@ -33,6 +33,54 @@ export const AUTOSAVE_DEBOUNCE_MS = 800;
 export const SECURITY_CHECK_MAX_ATTEMPTS = 3;
 
 export const ROUTES = {
+  /** Holdings landing page — the new app root. */
+  holdings: "/",
+  bank: "/bank",
+  pensions: "/pensions",
+  stockbroking: "/stockbroking",
+  /** Full product grid — kept as a secondary "browse all products" entry point. */
   home: "/apply",
   apply: (productCode: string) => `/apply/${productCode}`,
 } as const;
+
+/**
+ * Per-product document-upload slots. Defaults to the original ID + passport
+ * photo pair; products that need more (e.g. Stockbroking's signature) extend
+ * it. Keeps DocumentUploadStep fully data-driven — no per-product branches.
+ */
+export interface DocumentSlotConfig {
+  key: string;
+  label: string;
+  helperText: string;
+  accept: string;
+}
+
+const DEFAULT_DOCUMENT_SLOTS: DocumentSlotConfig[] = [
+  {
+    key: "idDocumentName",
+    label: "Government-issued ID",
+    helperText: "A clear photo or scan of your ID, passport, or driver's licence.",
+    accept: "image/*,.pdf",
+  },
+  {
+    key: "passportPhotoName",
+    label: "Passport photograph",
+    helperText: "A recent, plain-background passport photo.",
+    accept: "image/*",
+  },
+];
+
+const SIGNATURE_SLOT: DocumentSlotConfig = {
+  key: "signatureName",
+  label: "Signature",
+  helperText: "A photo or scan of your signature on plain white paper.",
+  accept: "image/*",
+};
+
+export const PRODUCT_DOCUMENT_SLOTS: Record<ProductCode, DocumentSlotConfig[]> = {
+  SAVINGS: DEFAULT_DOCUMENT_SLOTS,
+  CURRENT: DEFAULT_DOCUMENT_SLOTS,
+  PENSION_RSA: DEFAULT_DOCUMENT_SLOTS,
+  STOCKBROKING: [...DEFAULT_DOCUMENT_SLOTS, SIGNATURE_SLOT],
+  INSURANCE: DEFAULT_DOCUMENT_SLOTS,
+};

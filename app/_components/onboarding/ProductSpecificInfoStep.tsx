@@ -4,11 +4,11 @@ import {useState} from "react";
 import toast from "react-hot-toast";
 import {useProduct, useSaveDraft} from "@/app/_hooks";
 import {useOnboardingStore} from "@/app/_hooks/useOnboardingStore";
-import {Input} from "@/app/_components/ui/Input";
-import {Select} from "@/app/_components/ui/Select";
-import {Checkbox} from "@/app/_components/ui/Checkbox";
-import {Button} from "@/app/_components/ui/Button";
-import {Skeleton} from "@/app/_components/ui/Skeleton";
+import {Input} from "@/app/_ui/Input";
+import {Select} from "@/app/_ui/Select";
+import {Checkbox} from "@/app/_ui/Checkbox";
+import {Button} from "@/app/_ui/Button";
+import {Skeleton} from "@/app/_ui/Skeleton";
 import type {AdditionalField} from "@/app/_types";
 
 function initialValueFor(field: AdditionalField, cached: unknown): string | boolean {

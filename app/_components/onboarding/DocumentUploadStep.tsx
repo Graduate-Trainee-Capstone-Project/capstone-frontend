@@ -4,47 +4,34 @@ import {useRef, useState} from "react";
 import toast from "react-hot-toast";
 import {useSaveDraft} from "@/app/_hooks";
 import {useOnboardingStore} from "@/app/_hooks/useOnboardingStore";
-import {Button} from "@/app/_components/ui/Button";
+import {Button} from "@/app/_ui/Button";
 import {cn} from "@/app/_utils/cn";
-
-interface DocumentSlot {
-  key: "idDocumentName" | "passportPhotoName";
-  label: string;
-  helperText: string;
-  accept: string;
-}
-
-const DOCUMENT_SLOTS: DocumentSlot[] = [
-  {
-    key: "idDocumentName",
-    label: "Government-issued ID",
-    helperText: "A clear photo or scan of your ID, passport, or driver's licence.",
-    accept: "image/*,.pdf",
-  },
-  {
-    key: "passportPhotoName",
-    label: "Passport photograph",
-    helperText: "A recent, plain-background passport photo.",
-    accept: "image/*",
-  },
-];
+import {PRODUCT_DOCUMENT_SLOTS, type DocumentSlotConfig} from "@/app/_constants";
 
 /**
  * No real storage backend for the demo — only the filename is captured and
- * sent to /save, standing in for an uploaded document reference.
+ * sent to /save, standing in for an uploaded document reference. Which
+ * slots render is entirely data-driven off PRODUCT_DOCUMENT_SLOTS, so a
+ * product needing an extra document (e.g. Stockbroking's signature) never
+ * requires a branch here.
  */
 export function DocumentUploadStep() {
   const draftId = useOnboardingStore((state) => state.draftId);
+  const productCode = useOnboardingStore((state) => state.productCode);
   const cachedFormData = useOnboardingStore((state) => state.formData);
   const patchFormData = useOnboardingStore((state) => state.patchFormData);
   const setCurrentStep = useOnboardingStore((state) => state.setCurrentStep);
   const saveDraft = useSaveDraft(draftId ?? "");
 
-  const [names, setNames] = useState<Record<string, string>>(() => ({
-    idDocumentName: typeof cachedFormData.idDocumentName === "string" ? cachedFormData.idDocumentName : "",
-    passportPhotoName:
-      typeof cachedFormData.passportPhotoName === "string" ? cachedFormData.passportPhotoName : "",
-  }));
+  const documentSlots = productCode ? PRODUCT_DOCUMENT_SLOTS[productCode] : [];
+
+  const [names, setNames] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    for (const slot of documentSlots) {
+      initial[slot.key] = typeof cachedFormData[slot.key] === "string" ? (cachedFormData[slot.key] as string) : "";
+    }
+    return initial;
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const pendingChangesRef = useRef<Record<string, unknown>>({});
 
@@ -52,7 +39,7 @@ export function DocumentUploadStep() {
     return <p className="text-sm text-error-400">Your session expired. Please start again.</p>;
   }
 
-  function handleFileChange(key: DocumentSlot["key"], file: File | null) {
+  function handleFileChange(key: DocumentSlotConfig["key"], file: File | null) {
     const name = file?.name ?? "";
     setNames((prev) => ({...prev, [key]: name}));
     setErrors((prev) => ({...prev, [key]: ""}));
@@ -61,7 +48,7 @@ export function DocumentUploadStep() {
 
   function validate(): boolean {
     const nextErrors: Record<string, string> = {};
-    for (const slot of DOCUMENT_SLOTS) {
+    for (const slot of documentSlots) {
       if (!names[slot.key]?.trim()) nextErrors[slot.key] = `${slot.label} is required.`;
     }
     setErrors(nextErrors);
@@ -93,7 +80,7 @@ export function DocumentUploadStep() {
       </div>
 
       <div className="flex flex-col gap-5">
-        {DOCUMENT_SLOTS.map((slot) => (
+        {documentSlots.map((slot) => (
           <div key={slot.key} className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-grey-800">{slot.label}</span>
             <label
