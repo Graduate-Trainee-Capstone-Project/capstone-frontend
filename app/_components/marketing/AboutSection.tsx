@@ -1,10 +1,10 @@
 import Image from "next/image";
-import {Icon} from "@/app/_ui/Icon";
+import { Icon } from "@/app/_ui/Icon";
 
 const STATS = [
-  {icon: "lucide:layers", value: "10 Subsidiaries", caption: "Full-spectrum ecosystem"},
-  {icon: "lucide:map-pin", value: "Nationwide Reach", caption: "Branches in all 36 states"},
-  {icon: "lucide:trophy", value: "#1 NGX Trader", caption: "Consistently leading volumes"},
+  { icon: "lucide:layers", value: "10 Subsidiaries", caption: "Full-spectrum ecosystem" },
+  { icon: "lucide:map-pin", value: "Nationwide Reach", caption: "Branches in all 36 states" },
+  { icon: "lucide:trophy", value: "#1 NGX Trader", caption: "Consistently leading volumes" },
 ];
 
 /**
@@ -18,7 +18,7 @@ export function AboutSection() {
     <section className="bg-primary-90">
       <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-12">
         <div className="relative lg:col-span-5">
-          <div className="relative h-[280px] w-full overflow-hidden rounded-2xl shadow-xl sm:h-[360px]">
+          <div className="relative h-70ll overflow-hidden rounded-2xl shadow-xl sm:h-90">
             <Image
               src="/images/auth-background-img.jpeg"
               alt="Stanbic IBTC Holdings — corporate headquarters interior"
@@ -26,7 +26,7 @@ export function AboutSection() {
               className="object-cover"
               sizes="(min-width: 1024px) 40vw, 100vw"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-primary-900/80 via-primary-900/0 to-transparent" />
+            <div className="absolute inset-0 bg-linear-to-t from-primary-900/80 via-primary-900/0 to-transparent" />
             <div className="absolute bottom-6 left-6 right-6 flex flex-col gap-1">
               <span className="text-[11px] font-semibold tracking-wide text-primary-50 uppercase">
                 Historical Footprint
@@ -35,7 +35,7 @@ export function AboutSection() {
             </div>
           </div>
 
-          <div className="absolute -bottom-6 -right-4 flex max-w-[280px] items-center gap-3 rounded-xl bg-white p-4 shadow-lg">
+          <div className="absolute -bottom-6 -right-4 flex max-w-70 items-center gap-3 rounded-xl bg-white p-4 shadow-lg">
             <Icon icon="lucide:award" className="size-7 shrink-0 text-primary-500" />
             <div className="flex flex-col">
               <span className="text-xs font-bold tracking-wide text-primary-900">A+ Fitch National Rating</span>

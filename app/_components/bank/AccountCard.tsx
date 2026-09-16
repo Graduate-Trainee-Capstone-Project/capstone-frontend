@@ -1,5 +1,5 @@
 import Link from "next/link";
-import {Icon} from "@/app/_ui";
+import { Icon } from "@/app/_ui";
 
 interface AccountStat {
   label: string;
@@ -13,13 +13,13 @@ interface AccountCardProps {
   description: string;
   stats: [AccountStat, AccountStat, AccountStat, AccountStat];
   features: string[];
-  cta: {label: string; href: string};
+  cta: { label: string; href: string };
   footnote: string;
   accent: "primary" | "dark";
 }
 
 /** Flagship account comparison card (Savings / Current) for the Bank page. */
-export function AccountCard({tag, segment, title, description, stats, features, cta, footnote, accent}: AccountCardProps) {
+export function AccountCard({ tag, segment, title, description, stats, features, cta, footnote, accent }: AccountCardProps) {
   const isDark = accent === "dark";
 
   return (
@@ -61,12 +61,11 @@ export function AccountCard({tag, segment, title, description, stats, features, 
       <div className="flex flex-col gap-2 pt-8">
         <Link
           href={cta.href}
-          className={`flex w-full items-center justify-center gap-2 rounded-xl px-6 py-4 text-sm font-semibold text-white shadow-sm transition-colors duration-150 ${
-            isDark ? "bg-primary-900 hover:bg-primary-700" : "bg-primary-500 hover:bg-primary-300"
-          }`}
+          className={`flex w-full items-center justify-center gap-2 rounded-xl px-6 py-4 text-sm font-semibold text-white shadow-sm transition-colors duration-150 ${isDark ? "bg-primary-900 hover:bg-primary-700" : "bg-primary-500 hover:bg-primary-300"
+            }`}
         >
           {cta.label}
-          <Icon icon="lucide:arrow-right" className="size-[18px]" />
+          <Icon icon="lucide:arrow-right" className="size-4.5" />
         </Link>
         <p className="text-center text-[11px] text-grey-600">{footnote}</p>
       </div>

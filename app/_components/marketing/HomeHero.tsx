@@ -1,11 +1,11 @@
 import Link from "next/link";
-import {Icon} from "@/app/_ui/Icon";
-import {WealthPreviewCard} from "@/app/_components/marketing/WealthPreviewCard";
-import {ROUTES} from "@/app/_constants";
+import { Icon } from "@/app/_ui/Icon";
+import { WealthPreviewCard } from "@/app/_components/marketing/WealthPreviewCard";
+import { ROUTES } from "@/app/_constants";
 
 const TRUST_CHIPS = [
-  {icon: "lucide:fingerprint", label: "Single BVN / NIN KYC Verification"},
-  {icon: "lucide:layout-dashboard", label: "Instant Unified Dashboard"},
+  { icon: "lucide:fingerprint", label: "Single BVN / NIN KYC Verification" },
+  { icon: "lucide:layout-dashboard", label: "Instant Unified Dashboard" },
 ];
 
 /**
@@ -22,7 +22,7 @@ export function HomeHero() {
         className="pointer-events-none absolute inset-0 opacity-40"
       >
         <div className="absolute -top-32 -left-32 size-96 rounded-full bg-primary-300 blur-[60px]" />
-        <div className="absolute top-1/2 right-0 size-[500px] -translate-y-1/2 translate-x-1/3 rounded-full bg-primary-300 opacity-30 blur-[70px]" />
+        <div className="absolute top-1/2 right-0 size-125 -translate-y-1/2 translate-x-1/3 rounded-full bg-primary-300 opacity-30 blur-[70px]" />
         <div className="absolute bottom-0 left-1/2 size-80 rounded-full bg-primary-900 blur-[50px]" />
       </div>
 
@@ -37,7 +37,7 @@ export function HomeHero() {
 
           <h1 className="max-w-2xl text-4xl leading-tight font-bold tracking-tight text-white sm:text-5xl sm:leading-[1.1]">
             One Holding,{" "}
-            <span className="bg-gradient-to-r from-primary-50 via-primary-50/80 to-white bg-clip-text text-transparent">
+            <span className="bg-linear-to-r from-primary-50 via-primary-50/80 to-white bg-clip-text text-transparent">
               Every Financial Service.
             </span>
           </h1>
@@ -60,7 +60,7 @@ export function HomeHero() {
               className="flex items-center gap-2 rounded-xl bg-white/10 px-7 py-3.5 text-sm font-semibold text-white backdrop-blur-sm transition-colors duration-150 hover:bg-white/20"
             >
               Explore Subsidiaries
-              <Icon icon="lucide:chevron-right" className="size-[18px]" />
+              <Icon icon="lucide:chevron-right" className="size-4.5" />
             </a>
           </div>
 

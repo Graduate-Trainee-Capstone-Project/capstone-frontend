@@ -1,5 +1,5 @@
 import Link from "next/link";
-import {Icon} from "@/app/_ui/Icon";
+import { Icon } from "@/app/_ui/Icon";
 
 interface SubsidiaryDetailCardProps {
   accentClassName: string;
@@ -57,7 +57,7 @@ export function SubsidiaryDetailCard({
         <ul className="flex w-full flex-col gap-3 pt-1">
           {features.map((feature) => (
             <li key={feature} className="flex items-center gap-2.5 text-xs text-primary-900">
-              <Icon icon="lucide:check-circle" className="size-[18px] shrink-0 text-primary-500" />
+              <Icon icon="lucide:check-circle" className="size-4.5 shrink-0 text-primary-500" />
               {feature}
             </li>
           ))}
@@ -70,7 +70,7 @@ export function SubsidiaryDetailCard({
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary-500 px-5 py-3 text-sm font-semibold text-white shadow-sm transition-colors duration-150 hover:bg-primary-300"
         >
           {ctaLabel}
-          <Icon icon="lucide:arrow-right" className="size-[18px]" />
+          <Icon icon="lucide:arrow-right" className="size-4.5" />
         </Link>
         <Link
           href={href}

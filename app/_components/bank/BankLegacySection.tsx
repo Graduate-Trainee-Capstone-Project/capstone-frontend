@@ -1,5 +1,5 @@
 import Image from "next/image";
-import {Icon} from "@/app/_ui";
+import { Icon } from "@/app/_ui";
 
 const NARRATIVE_POINTS = [
   {
@@ -43,7 +43,7 @@ export function BankLegacySection() {
           <div className="flex flex-1 flex-col gap-4 pt-6">
             <div className="flex flex-col gap-2 rounded-2xl bg-primary-900 p-5">
               <div className="flex items-center gap-2">
-                <Icon icon="lucide:shield-check" className="size-[18px] text-primary-50" />
+                <Icon icon="lucide:shield-check" className="size-4.5 text-primary-50" />
                 <span className="text-[11px] font-semibold tracking-wide text-primary-50">Security Grade</span>
               </div>
               <span className="text-lg font-semibold text-white">Tier-4 Sovereign Grade Data Centers</span>

@@ -1,4 +1,4 @@
-import {Icon} from "@/app/_ui";
+import { Icon } from "@/app/_ui";
 
 /** Synthetic debit-card + ledger visual shown beside the Bank page hero copy. */
 export function DebitCardPreview() {
@@ -19,8 +19,8 @@ export function DebitCardPreview() {
         </span>
       </div>
 
-      <div className="relative flex w-full flex-col gap-6 overflow-hidden rounded-xl bg-gradient-to-br from-primary-900 via-primary-700 to-primary-500 p-6 shadow-lg">
-        <div aria-hidden className="pointer-events-none absolute -top-6 right-0 size-36 rounded-full bg-primary-300/20 blur-[12px]" />
+      <div className="relative flex w-full flex-col gap-6 overflow-hidden rounded-xl bg-linear-to-br from-primary-900 via-primary-700 to-primary-500 p-6 shadow-lg">
+        <div aria-hidden className="pointer-events-none absolute -top-6 right-0 size-36 rounded-full bg-primary-300/20 blur-md" />
 
         <div className="flex items-center justify-between">
           <div className="flex flex-col gap-1">

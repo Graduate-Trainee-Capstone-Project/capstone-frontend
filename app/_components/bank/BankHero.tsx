@@ -1,18 +1,18 @@
 import Link from "next/link";
-import {Icon} from "@/app/_ui";
-import {DebitCardPreview} from "@/app/_components/bank/DebitCardPreview";
-import {ROUTES} from "@/app/_constants";
+import { Icon } from "@/app/_ui";
+import { DebitCardPreview } from "@/app/_components/bank/DebitCardPreview";
+import { ROUTES } from "@/app/_constants";
 
 const TRUST_BULLETS = [
-  {icon: "lucide:arrow-left-right", label: "Zero transfer fees on select tiers"},
-  {icon: "lucide:shield-check", label: "NDIC Insured to statutory maximum"},
-  {icon: "lucide:fingerprint", label: "Instant BVN verification"},
+  { icon: "lucide:arrow-left-right", label: "Zero transfer fees on select tiers" },
+  { icon: "lucide:shield-check", label: "NDIC Insured to statutory maximum" },
+  { icon: "lucide:fingerprint", label: "Instant BVN verification" },
 ];
 
 /** Bank page hero — light gradient background with a synthetic debit-card visual. */
 export function BankHero() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-primary-90 to-white">
+    <section className="relative overflow-hidden bg-linear-to-b from-primary-90 to-white">
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="absolute -top-32 -right-32 size-96 rounded-full bg-primary-500/5 blur-[32px]" />
         <div className="absolute top-48 -left-20 size-80 rounded-full bg-primary-300/5 blur-[20px]" />
@@ -43,13 +43,13 @@ export function BankHero() {
               className="flex items-center gap-2 rounded-xl bg-primary-500 px-7 py-3.5 text-sm font-semibold text-white shadow-lg transition-colors duration-150 hover:bg-primary-300"
             >
               Open An Account
-              <Icon icon="lucide:arrow-right" className="size-[18px]" />
+              <Icon icon="lucide:arrow-right" className="size-4.5" />
             </Link>
             <a
               href="#compare-accounts"
               className="flex items-center gap-2 rounded-xl bg-primary-75 px-6 py-3.5 text-sm font-semibold text-primary-900 transition-colors duration-150 hover:bg-primary-90"
             >
-              <Icon icon="lucide:scale" className="size-[18px]" />
+              <Icon icon="lucide:scale" className="size-4.5" />
               Compare Accounts
             </a>
           </div>
@@ -57,7 +57,7 @@ export function BankHero() {
           <div className="flex flex-wrap items-center gap-6 pt-4">
             {TRUST_BULLETS.map((bullet) => (
               <div key={bullet.label} className="flex items-center gap-2">
-                <Icon icon={bullet.icon} className="size-[18px] text-primary-500" />
+                <Icon icon={bullet.icon} className="size-4.5xt-primary-500" />
                 <span className="text-[11px] font-semibold tracking-wide text-grey-600">{bullet.label}</span>
               </div>
             ))}

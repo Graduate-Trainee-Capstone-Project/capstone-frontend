@@ -1,11 +1,11 @@
 import Link from "next/link";
-import {Icon} from "@/app/_ui/Icon";
-import {ROUTES} from "@/app/_constants";
+import { Icon } from "@/app/_ui/Icon";
+import { ROUTES } from "@/app/_constants";
 
 const ALLOCATION_SPLIT = [
-  {label: "30% Banking", caption: "High-Yield Liquidity", className: "text-primary-500"},
-  {label: "40% Pension", caption: "RSA Fund II/III", className: "text-primary-300"},
-  {label: "30% Stocks", caption: "NGX Dividend Growth", className: "text-primary-900"},
+  { label: "30% Banking", caption: "High-Yield Liquidity", className: "text-primary-500" },
+  { label: "40% Pension", caption: "RSA Fund II/III", className: "text-primary-300" },
+  { label: "30% Stocks", caption: "NGX Dividend Growth", className: "text-primary-900" },
 ];
 
 /**
@@ -103,7 +103,7 @@ export function GrowthProjector() {
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary-900 py-3 text-sm font-semibold text-white transition-colors duration-150 hover:bg-primary-700"
             >
               Open Ecosystem Accounts
-              <Icon icon="lucide:arrow-right" className="size-[18px]" />
+              <Icon icon="lucide:arrow-right" className="size-4.5" />
             </Link>
           </div>
         </div>

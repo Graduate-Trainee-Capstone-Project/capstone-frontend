@@ -1,20 +1,20 @@
 import Link from "next/link";
-import {Icon} from "@/app/_ui";
+import { Icon } from "@/app/_ui";
 
 interface AlreadyCustomerCtaProps {
   eyebrow: string;
   title: string;
   description: string;
-  primaryCta: {label: string; href: string; icon?: string};
-  secondaryCta?: {label: string; icon?: string};
+  primaryCta: { label: string; href: string; icon?: string };
+  secondaryCta?: { label: string; icon?: string };
 }
 
 /** Dark gradient "already a customer?" cross-sell banner used across subsidiary pages. */
-export function AlreadyCustomerCta({eyebrow, title, description, primaryCta, secondaryCta}: AlreadyCustomerCtaProps) {
+export function AlreadyCustomerCta({ eyebrow, title, description, primaryCta, secondaryCta }: AlreadyCustomerCtaProps) {
   return (
     <section className="bg-white">
       <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-primary-900 via-primary-700 to-primary-500 p-8 shadow-xl sm:p-12">
+        <div className="relative overflow-hidden rounded-3xl bg-linear-to-r from-primary-900 via-primary-700 to-primary-500 p-8 shadow-xl sm:p-12">
           <div aria-hidden className="pointer-events-none absolute -right-16 -bottom-16 size-80 rounded-full bg-primary-300/30 blur-[32px]" />
           <div className="relative flex flex-col items-start justify-between gap-8 lg:flex-row lg:items-center">
             <div className="flex max-w-xl flex-col items-start gap-3">
@@ -36,7 +36,7 @@ export function AlreadyCustomerCta({eyebrow, title, description, primaryCta, sec
               </Link>
               {secondaryCta && (
                 <span className="flex items-center gap-2 rounded-xl bg-black/25 px-6 py-4 text-sm font-semibold text-white">
-                  {secondaryCta.icon && <Icon icon={secondaryCta.icon} className="size-[18px]" />}
+                  {secondaryCta.icon && <Icon icon={secondaryCta.icon} className="size-4.5" />}
                   {secondaryCta.label}
                 </span>
               )}

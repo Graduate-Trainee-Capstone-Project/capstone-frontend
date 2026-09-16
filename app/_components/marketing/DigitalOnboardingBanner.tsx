@@ -1,6 +1,6 @@
 import Link from "next/link";
-import {Icon} from "@/app/_ui/Icon";
-import {ROUTES} from "@/app/_constants";
+import { Icon } from "@/app/_ui/Icon";
+import { ROUTES } from "@/app/_constants";
 
 const STEPS = ["Verify BVN / NIN", "Select Desired Units", "Instant Account Activation"];
 
@@ -72,7 +72,7 @@ export function DigitalOnboardingBanner() {
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary-500 px-4 py-3.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-primary-300"
                 >
                   Start Verification
-                  <Icon icon="lucide:arrow-right" className="size-[18px]" />
+                  <Icon icon="lucide:arrow-right" className="size-4.5" />
                 </Link>
               </div>
             </div>
