@@ -1,9 +1,12 @@
 import "server-only";
 import type {
+  AddressInfo,
   ApplicationDraftResponse,
   Channel,
+  DraftFormData,
   DraftStatus,
   DraftStep,
+  ExistingCustomerData,
   IdentifierType,
   Product,
   SecurityCheckType,
@@ -30,18 +33,18 @@ export interface DraftRecord {
   secondaryIdentifierType?: IdentifierType;
   secondaryIdentifierValue?: string;
   currentStep: DraftStep;
-  formData: Record<string, unknown>;
+  formData: DraftFormData;
   channel: Channel;
   status: DraftStatus;
   isExistingCustomer: boolean;
   createdAt: string;
   lastUpdatedAt: string;
-  securityCheckAttempts: Record<SecurityCheckType, number>;
+  expiresAt: string;
 }
 
 export interface MockCustomerRecord {
   customerId: string;
-  formData: Record<string, unknown>;
+  formData: DraftFormData;
 }
 
 // ─── Products catalog ───
@@ -55,7 +58,6 @@ export const mockProducts: Product[] = [
     additionalFieldsSchema: [
       {field: "branchPreference", label: "Preferred branch", type: "text", required: false},
     ],
-    isActive: true,
   },
   {
     productId: "prod-current",
@@ -65,7 +67,6 @@ export const mockProducts: Product[] = [
     additionalFieldsSchema: [
       {field: "chequeBookRequested", label: "Request a cheque book", type: "checkbox", required: false},
     ],
-    isActive: true,
   },
   {
     productId: "prod-pension",
@@ -107,7 +108,6 @@ export const mockProducts: Product[] = [
         required: true,
       },
     ],
-    isActive: true,
   },
   {
     productId: "prod-stockbroking",
@@ -130,7 +130,6 @@ export const mockProducts: Product[] = [
       {field: "existingBankAccountNumber", label: "Account number", type: "text", required: false},
       {field: "riskProfile", label: "Risk profile", type: "text", required: false},
     ],
-    isActive: true,
   },
   {
     productId: "prod-insurance",
@@ -138,7 +137,6 @@ export const mockProducts: Product[] = [
     productName: "Insurance",
     requiredIdentifiers: ["EMAIL", "PHONE"],
     additionalFieldsSchema: [{field: "policyType", label: "Policy type", type: "text", required: false}],
-    isActive: false,
   },
 ];
 
@@ -166,7 +164,7 @@ mockIdentifierIndex.set("BVN:12345678901", {
     dateOfBirth: "1995-04-12",
     gender: "FEMALE",
     nationality: "Nigerian",
-    address: {street: "12 Marina Rd", city: "Lagos", state: "Lagos"},
+    address: [{street: "12 Marina Rd", city: "Lagos", state: "Lagos"}],
     nextOfKin: {fullName: "Chidi Okonkwo", relationship: "Sibling", phone: "+2348012345678"},
   },
 });
@@ -192,15 +190,63 @@ export function draftKey(productCode: string, primaryIdentifierValue: string): s
 export function toApplicationDraftResponse(draft: DraftRecord): ApplicationDraftResponse {
   return {
     draftId: draft.draftId,
-    productCode: draft.productCode as ApplicationDraftResponse["productCode"],
+    productId: draft.productId,
+    primaryIdentifierType: draft.primaryIdentifierType,
+    secondaryIdentifierType: draft.secondaryIdentifierType ?? null,
     currentStep: draft.currentStep,
     formData: draft.formData,
-    isExistingCustomer: draft.isExistingCustomer,
+    channel: draft.channel,
     status: draft.status,
+    createdAt: draft.createdAt,
     lastUpdatedAt: draft.lastUpdatedAt,
+    expiresAt: draft.expiresAt,
   };
 }
 
 export function generateId(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
+}
+
+// ─── Security-check attempt counters, keyed by draftId only — deliberately
+// NOT part of DraftRecord/mockDrafts. Security checks are always mocked
+// (see actions/index.ts), even when the rest of the app is pointed at the
+// live API, so draftId is frequently a real BE-issued Guid that mockDrafts
+// has never heard of. Tracking attempts here instead of on draft.* keeps
+// the fail-once-then-pass / lockout demo behavior working regardless of
+// whether the draft itself is a mock or a live one. ───
+
+const mockSecurityCheckAttempts = new Map<string, Record<SecurityCheckType, number>>();
+
+export function getSecurityCheckAttempts(draftId: string): Record<SecurityCheckType, number> {
+  let attempts = mockSecurityCheckAttempts.get(draftId);
+  if (!attempts) {
+    attempts = {SECURITY_QUESTION: 0, FACIAL_RECOGNITION: 0, OTP: 0};
+    mockSecurityCheckAttempts.set(draftId, attempts);
+  }
+  return attempts;
+}
+
+function toSingleAddressString(address?: AddressInfo[]): string | null {
+  const first = address?.[0];
+  if (!first) return null;
+  const parts = [first.houseNumber, first.street, first.city, first.state, first.country].filter(Boolean);
+  return parts.length > 0 ? parts.join(", ") : null;
+}
+
+/**
+ * BE's "new existing-customer start" returns an empty formData and puts the
+ * matched profile on existingCustomer instead (a flattened, single-address
+ * shape) — see docs/justin-backend-alignment-briefing.md B2.
+ */
+export function toExistingCustomerData(formData: DraftFormData): ExistingCustomerData {
+  return {
+    firstName: formData.firstName ?? "",
+    middleName: formData.middleName ?? null,
+    lastName: formData.lastName ?? "",
+    dateOfBirth: formData.dateOfBirth ?? null,
+    gender: formData.gender ?? null,
+    phoneNumber: formData.phoneNumber ?? null,
+    email: formData.email ?? null,
+    address: toSingleAddressString(formData.address),
+  };
 }

@@ -31,6 +31,8 @@ export function ApplyProductClient({productCode}: ApplyProductClientProps) {
   const currentStep = useOnboardingStore((state) => state.currentStep);
   const setCurrentStep = useOnboardingStore((state) => state.setCurrentStep);
   const patchFormData = useOnboardingStore((state) => state.patchFormData);
+  const securityCheckSubStep = useOnboardingStore((state) => state.securityCheckSubStep);
+  const setSecurityCheckSubStep = useOnboardingStore((state) => state.setSecurityCheckSubStep);
   const reset = useOnboardingStore((state) => state.reset);
 
   const hasMatchingCachedDraft = Boolean(draftId) && storedProductCode === productCode;
@@ -40,13 +42,25 @@ export function ApplyProductClient({productCode}: ApplyProductClientProps) {
     if (!applicationQuery.data) return;
     setCurrentStep(applicationQuery.data.currentStep);
     patchFormData(applicationQuery.data.formData);
+    // securityCheckSubStep isn't persisted (it's UI-only), so a page reload
+    // that resumes straight into a draft already sitting at
+    // SECURITY_VERIFICATION would otherwise land with no sub-step set and
+    // no modal ever opening. Only set it when null, so this never stomps a
+    // sub-step the user is actively progressing through on a data refetch.
+    if (applicationQuery.data.currentStep === "SECURITY_VERIFICATION" && !securityCheckSubStep) {
+      setSecurityCheckSubStep("OTP");
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [applicationQuery.data]);
 
   useEffect(() => {
     if (!applicationQuery.error) return;
     if (applicationQuery.error instanceof ApiRequestError) {
-      if (applicationQuery.error.code === "DRAFT_ALREADY_SUBMITTED") {
+      const message = applicationQuery.error.message;
+      if (
+        applicationQuery.error.code === "DRAFT_ALREADY_SUBMITTED" ||
+        /already submitted|not in progress/i.test(message)
+      ) {
         toast("This application was already submitted.");
       }
     }

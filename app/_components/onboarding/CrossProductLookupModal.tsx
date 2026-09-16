@@ -2,48 +2,52 @@
 
 import {useState} from "react";
 import toast from "react-hot-toast";
-import {useRequestBvnOtp, useVerifyBvnOtp} from "@/app/_hooks";
+import {useLookupCustomer} from "@/app/_hooks";
 import {Modal} from "@/app/_ui/Modal";
 import {Input} from "@/app/_ui/Input";
 import {Checkbox} from "@/app/_ui/Checkbox";
 import {Button} from "@/app/_ui/Button";
-import {isValidBVN} from "@/app/_utils/validators";
+import {IDENTIFIER_META} from "@/app/_constants";
+import {normalizePhone, validateIdentifier} from "@/app/_utils/validators";
+import type {IdentifierType} from "@/app/_types";
 
 interface CrossProductLookupModalProps {
   isOpen: boolean;
   onClose: () => void;
+  identifierType?: IdentifierType;
   /** Called with the matched customer's formData — caller decides how to merge it in. */
   onPrefilled: (formData: Record<string, unknown>) => void;
 }
 
-/**
- * Product-agnostic "already a customer?" shortcut. Verifies a BVN via OTP,
- * then — regardless of which subsidiary this modal was opened from — looks
- * the BVN up against the shared customer-keyed identifier index and hands
- * back whatever profile data exists, so any apply flow can prefill from it.
- */
-export function CrossProductLookupModal({isOpen, onClose, onPrefilled}: CrossProductLookupModalProps) {
-  const requestOtp = useRequestBvnOtp();
-  const verifyOtp = useVerifyBvnOtp();
+const OTP_PATTERN = /^\d{6}$/;
 
-  const [stage, setStage] = useState<"BVN" | "OTP">("BVN");
-  const [bvn, setBvn] = useState("");
-  const [bvnError, setBvnError] = useState("");
+/**
+ * Product-agnostic "already a customer?" shortcut. OTP is client-side only
+ * (any 6 digits). After that gate, POST /customers/lookup hits the live API.
+ */
+export function CrossProductLookupModal({
+  isOpen,
+  onClose,
+  identifierType = "BVN",
+  onPrefilled,
+}: CrossProductLookupModalProps) {
+  const lookupCustomer = useLookupCustomer();
+  const identifierMeta = IDENTIFIER_META[identifierType];
+
+  const [stage, setStage] = useState<"IDENTIFIER" | "OTP">("IDENTIFIER");
+  const [identifierValue, setIdentifierValue] = useState("");
+  const [identifierError, setIdentifierError] = useState("");
   const [otp, setOtp] = useState("");
   const [otpError, setOtpError] = useState("");
-  const [otpToken, setOtpToken] = useState("");
-  const [maskedPhone, setMaskedPhone] = useState("");
   const [consented, setConsented] = useState(false);
   const [consentError, setConsentError] = useState("");
 
   function resetAndClose() {
-    setStage("BVN");
-    setBvn("");
-    setBvnError("");
+    setStage("IDENTIFIER");
+    setIdentifierValue("");
+    setIdentifierError("");
     setOtp("");
     setOtpError("");
-    setOtpToken("");
-    setMaskedPhone("");
     setConsented(false);
     setConsentError("");
     onClose();
@@ -51,94 +55,89 @@ export function CrossProductLookupModal({isOpen, onClose, onPrefilled}: CrossPro
 
   function handleRequestOtp(event: React.FormEvent) {
     event.preventDefault();
-    const result = isValidBVN(bvn);
+    const result = validateIdentifier(identifierType, identifierValue);
     if (!result.valid) {
-      setBvnError(result.message ?? "Enter a valid BVN.");
+      setIdentifierError(result.message ?? "Enter a valid value.");
       return;
     }
-    setBvnError("");
-
-    requestOtp.mutate(
-      {bvn: bvn.trim()},
-      {
-        onSuccess: (data) => {
-          setOtpToken(data.otpToken);
-          setMaskedPhone(data.maskedPhone);
-          setStage("OTP");
-          toast.success(`Code sent to ${data.maskedPhone}. (Demo code: 0000)`);
-        },
-        onError: (error) => setBvnError(error.message || "Couldn't send a code. Please try again."),
-      },
-    );
+    setIdentifierError("");
+    setStage("OTP");
   }
 
   function handleVerifyOtp(event: React.FormEvent) {
     event.preventDefault();
+    if (!OTP_PATTERN.test(otp.trim())) {
+      setOtpError("Enter the 6-digit code.");
+      return;
+    }
     if (!consented) {
       setConsentError("Please confirm your consent to continue.");
       return;
     }
+    setOtpError("");
     setConsentError("");
 
-    verifyOtp.mutate(
-      {otpToken, otp: otp.trim(), bvn: bvn.trim()},
+    const value =
+      identifierType === "PHONE" ? normalizePhone(identifierValue) : identifierValue.trim();
+
+    lookupCustomer.mutate(
+      {identifierType, identifierValue: value},
       {
         onSuccess: (data) => {
           if (data.matched && data.formData) {
             onPrefilled(data.formData);
             toast.success("Found your profile — we've prefilled what we can.");
           } else {
-            toast("No existing profile found for that BVN. Continue below as normal.");
+            toast("No existing profile found for that identifier. Continue below as normal.");
           }
           resetAndClose();
         },
-        onError: (error) => setOtpError(error.message || "Couldn't verify that code. Please try again."),
+        onError: (error) => setOtpError(error.message || "Couldn't look up that profile. Please try again."),
       },
     );
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={resetAndClose} title="Verify with your BVN">
-      {stage === "BVN" ? (
+    <Modal isOpen={isOpen} onClose={resetAndClose} title={`Verify with your ${identifierType}`}>
+      {stage === "IDENTIFIER" ? (
         <form onSubmit={handleRequestOtp} className="flex flex-col gap-4">
           <p className="text-sm text-grey-600">
             If you already have an account with any Stanbic IBTC business — Bank, Pension, or Stockbroking — we
-            can use your BVN to fetch your details and speed things up.
+            can fetch your details and speed things up.
           </p>
           <Input
-            label="Bank Verification Number (BVN)"
-            name="lookupBvn"
-            inputMode="numeric"
-            maxLength={11}
-            placeholder="e.g. 12345678901"
-            value={bvn}
+            label={identifierMeta.label}
+            name="lookupIdentifier"
+            inputMode={identifierMeta.inputMode}
+            maxLength={identifierMeta.maxLength}
+            placeholder={identifierMeta.placeholder}
+            value={identifierValue}
             onChange={(e) => {
-              setBvn(e.target.value);
-              setBvnError("");
+              setIdentifierValue(e.target.value);
+              setIdentifierError("");
             }}
-            error={bvnError}
-            disabled={requestOtp.isPending}
+            error={identifierError}
           />
-          <Button type="submit" isLoading={requestOtp.isPending} fullWidth>
-            Send verification code
+          <Button type="submit" fullWidth>
+            Continue
           </Button>
         </form>
       ) : (
         <form onSubmit={handleVerifyOtp} className="flex flex-col gap-4">
-          <p className="text-sm text-grey-600">Enter the one-time code sent to {maskedPhone}.</p>
+          <p className="text-sm text-grey-600">Enter the 6-digit one-time code to continue.</p>
           <Input
             label="One-time code"
             name="lookupOtp"
             inputMode="numeric"
-            maxLength={4}
-            placeholder="0000"
+            maxLength={6}
+            placeholder="000000"
             value={otp}
             onChange={(e) => {
               setOtp(e.target.value);
               setOtpError("");
             }}
             error={otpError}
-            disabled={verifyOtp.isPending}
+            disabled={lookupCustomer.isPending}
             required
           />
           <Checkbox
@@ -150,7 +149,7 @@ export function CrossProductLookupModal({isOpen, onClose, onPrefilled}: CrossPro
             }}
             error={consentError}
           />
-          <Button type="submit" isLoading={verifyOtp.isPending} fullWidth>
+          <Button type="submit" isLoading={lookupCustomer.isPending} fullWidth>
             Verify
           </Button>
         </form>

@@ -8,6 +8,8 @@ import {Button} from "@/app/_ui/Button";
 import {Checkbox} from "@/app/_ui/Checkbox";
 import {Skeleton} from "@/app/_ui/Skeleton";
 import {PRODUCT_DOCUMENT_SLOTS} from "@/app/_constants";
+import {readSchemaField} from "@/app/_utils/formData";
+import type {DraftDocument} from "@/app/_types";
 
 interface SummaryRow {
   label: string;
@@ -70,24 +72,32 @@ export function ReviewStep() {
   }
 
   const personalRows = rowsFrom(PERSONAL_LABELS, formData);
-  const addressRows = rowsFrom({street: "Street", city: "City", state: "State"}, (formData.address as Record<string, unknown>) ?? {});
+  const addressRows = rowsFrom(
+    {street: "Street", city: "City", state: "State"},
+    (formData.address?.[0] as unknown as Record<string, unknown>) ?? {},
+  );
   const nextOfKinRows = rowsFrom(
     {fullName: "Full name", relationship: "Relationship", phone: "Phone"},
     (formData.nextOfKin as Record<string, unknown>) ?? {},
   );
   const productRows: SummaryRow[] = (product?.additionalFieldsSchema ?? [])
     .map((field) => {
-      const raw = formData[field.field];
+      const raw = readSchemaField(formData, field.field);
       if (raw === undefined || raw === null || raw === "") return null;
       const value = typeof raw === "boolean" ? (raw ? "Yes" : "No") : String(raw);
       return {label: field.label, value};
     })
     .filter((row): row is SummaryRow => row !== null);
-  const documentSlots = productCode ? PRODUCT_DOCUMENT_SLOTS[productCode] : [];
-  const documentRows = rowsFrom(
-    Object.fromEntries(documentSlots.map((slot) => [slot.key, slot.label])),
-    formData,
-  );
+  const documents = Array.isArray(formData.documents) ? (formData.documents as DraftDocument[]) : [];
+  const documentRows: SummaryRow[] =
+    documents.length > 0
+      ? documents
+          .filter((doc) => doc.type && doc.url)
+          .map((doc) => ({label: String(doc.type), value: String(doc.url)}))
+      : rowsFrom(
+          Object.fromEntries((productCode ? PRODUCT_DOCUMENT_SLOTS[productCode] : []).map((slot) => [slot.key, slot.label])),
+          formData,
+        );
 
   const consentCopy = isExistingCustomer
     ? "I consent to Stanbic IBTC using my verified details for this application and reusing my previously verified KYC information."

@@ -97,7 +97,10 @@ export function IdentifierCaptureStep({productCode}: IdentifierCaptureStepProps)
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-      <ExistingCustomerBanner onPrefilled={patchFormData} />
+      <ExistingCustomerBanner
+        identifierType={primaryType ?? "BVN"}
+        onPrefilled={patchFormData}
+      />
 
       <div className="flex flex-col gap-1">
         <h2 className="text-xl font-semibold text-grey-900">{product.productName}</h2>

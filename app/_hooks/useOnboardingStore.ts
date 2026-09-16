@@ -3,13 +3,58 @@
 import {create} from "zustand";
 import {persist} from "zustand/middleware";
 import type {
+  DraftFormData,
   DraftStep,
+  ExistingCustomerData,
   FinalizeApplicationResponse,
   ProductCode,
   StartApplicationResponse,
 } from "@/app/_types";
 
-type SecurityCheckSubStep = "SECURITY_QUESTION" | "FACIAL_RECOGNITION" | null;
+/**
+ * New existing-customer starts come back with empty formData and the profile
+ * on `existingCustomer` instead — map it into the same bag PersonalInfoStep
+ * reads from. `address` is a single street string on existingCustomer (not
+ * our {street, city, state} shape), so it lands in address[0].street only.
+ */
+function prefillFromExistingCustomer(existing: ExistingCustomerData): Partial<DraftFormData> {
+  const prefill: Partial<DraftFormData> = {
+    firstName: existing.firstName,
+    lastName: existing.lastName,
+  };
+  if (existing.middleName) prefill.middleName = existing.middleName;
+  if (existing.dateOfBirth) prefill.dateOfBirth = existing.dateOfBirth;
+  if (existing.gender) prefill.gender = existing.gender;
+  if (existing.phoneNumber) prefill.phoneNumber = existing.phoneNumber;
+  if (existing.email) prefill.email = existing.email;
+  if (existing.address) prefill.address = [{street: existing.address, city: "", state: ""}];
+  return prefill;
+}
+
+/**
+ * Shallow-merges top-level formData keys, but deep-merges the nested groups
+ * (address, nextOfKin) instead of overwriting them wholesale — autosave only
+ * ever sends the fields changed since the last save, so a plain shallow
+ * merge would drop previously-saved sibling fields (e.g. saving a new
+ * `street` alone would blank out `city`/`state` in the store).
+ */
+function mergeFormData(base: DraftFormData, partial: Partial<DraftFormData>): DraftFormData {
+  const merged: DraftFormData = {...base, ...partial};
+
+  if (partial.address !== undefined) {
+    const prevAddress = base.address?.[0] ?? {};
+    const nextAddress = partial.address[0] ?? {};
+    merged.address = [{...prevAddress, ...nextAddress}];
+  }
+
+  if (partial.nextOfKin !== undefined) {
+    merged.nextOfKin = {...base.nextOfKin, ...partial.nextOfKin};
+  }
+
+  return merged;
+}
+
+type SecurityCheckSubStep = "OTP" | "SECURITY_QUESTION" | "FACIAL_RECOGNITION" | null;
 
 interface OnboardingState {
   productCode: ProductCode | null;
@@ -19,7 +64,7 @@ interface OnboardingState {
   isExistingCustomer: boolean;
   requiresSecurityCheck: boolean;
   /** Accumulated form values, kept locally only for prefill across steps — never the source of truth for persistence. */
-  formData: Record<string, unknown>;
+  formData: DraftFormData;
   /** UI-only: which security sub-modal is showing. Never round-trips to the server. */
   securityCheckSubStep: SecurityCheckSubStep;
   /**
@@ -31,7 +76,7 @@ interface OnboardingState {
 
   setFromStartResponse: (response: StartApplicationResponse, productCode: ProductCode) => void;
   setCurrentStep: (step: DraftStep) => void;
-  patchFormData: (partial: Record<string, unknown>) => void;
+  patchFormData: (partial: Partial<DraftFormData>) => void;
   setSecurityCheckSubStep: (subStep: SecurityCheckSubStep) => void;
   setFinalizeResult: (result: FinalizeApplicationResponse) => void;
   reset: () => void;
@@ -61,22 +106,38 @@ export const useOnboardingStore = create<OnboardingState>()(
     (set) => ({
       ...INITIAL_STATE,
 
-      setFromStartResponse: (response, productCode) =>
+      setFromStartResponse: (response, productCode) => {
+        const formDataFromResponse = response.formData ?? {};
+        const hasFormData = Object.keys(formDataFromResponse).length > 0;
+
         set({
           productCode,
           draftId: response.draftId,
           currentStep: response.currentStep,
           isExistingCustomer: response.isExistingCustomer,
           requiresSecurityCheck: response.requiresSecurityCheck,
-          formData: response.formData ?? {},
+          formData:
+            hasFormData || !response.existingCustomer
+              ? formDataFromResponse
+              : prefillFromExistingCustomer(response.existingCustomer),
           // Existing customers land straight on SECURITY_VERIFICATION — make
           // sure the first sub-modal is queued up rather than left null.
-          securityCheckSubStep: response.requiresSecurityCheck ? "SECURITY_QUESTION" : null,
-        }),
+          // OTP first (phone-possession check), then security questions,
+          // then facial — see SecurityVerificationStep. Also check
+          // currentStep directly, not just requiresSecurityCheck: resuming a
+          // draft that was left mid-verification comes back with
+          // requiresSecurityCheck: false (it's only true on a brand-new
+          // match) but currentStep still "SECURITY_VERIFICATION" — without
+          // this, the screen renders with no sub-step set and no modal ever
+          // opens, leaving the user stuck with nothing to interact with.
+          securityCheckSubStep:
+            response.requiresSecurityCheck || response.currentStep === "SECURITY_VERIFICATION" ? "OTP" : null,
+        });
+      },
 
       setCurrentStep: (step) => set({currentStep: step}),
 
-      patchFormData: (partial) => set((state) => ({formData: {...state.formData, ...partial}})),
+      patchFormData: (partial) => set((state) => ({formData: mergeFormData(state.formData, partial)})),
 
       setSecurityCheckSubStep: (subStep) => set({securityCheckSubStep: subStep}),
 

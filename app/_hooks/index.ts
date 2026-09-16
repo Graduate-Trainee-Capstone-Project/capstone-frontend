@@ -7,19 +7,17 @@ import {
   getProductAction,
   getProductsAction,
   getSecurityCheckQuestionsAction,
-  requestBvnOtpAction,
+  lookupCustomerAction,
   saveDraftAction,
   startApplicationAction,
   submitSecurityCheckAction,
-  verifyBvnOtpAction,
 } from "@/app/_lib/actions";
 import type {
   ApiResult,
-  RequestBvnOtpRequest,
+  LookupCustomerRequest,
   SaveDraftRequest,
   SecurityCheckRequest,
   StartApplicationRequest,
-  VerifyBvnOtpRequest,
 } from "@/app/_types";
 
 /**
@@ -164,18 +162,11 @@ export function useFinalizeApplication(draftId: string) {
   });
 }
 
-// ─── POST /existing-customer/bvn-otp/request, /verify ───
-// Product-agnostic "already a customer?" shortcut — usable from any apply
-// flow's identifier-capture screen, not tied to a productCode query key.
+// ─── POST /customers/lookup ───
+// Never mocked. OTP is client-side; this call is the real customer fetch.
 
-export function useRequestBvnOtp() {
+export function useLookupCustomer() {
   return useMutation({
-    mutationFn: async (input: RequestBvnOtpRequest) => unwrap(await requestBvnOtpAction(input)),
-  });
-}
-
-export function useVerifyBvnOtp() {
-  return useMutation({
-    mutationFn: async (input: VerifyBvnOtpRequest) => unwrap(await verifyBvnOtpAction(input)),
+    mutationFn: async (input: LookupCustomerRequest) => unwrap(await lookupCustomerAction(input)),
   });
 }
