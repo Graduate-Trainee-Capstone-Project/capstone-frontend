@@ -41,7 +41,10 @@ async function baseRequest<T>(endpoint: string, options: RequestInit = {}): Prom
 
   if (!response.ok) {
     const errorMessage: string =
-      data?.error?.message ?? `Request failed with status ${response.status}`;
+      data?.message ??
+      data?.details ??
+      data?.error?.message ??
+      `Request failed with status ${response.status}`;
     const errorCode: ApiErrorCode | undefined = data?.error?.code;
     const errorField: string | undefined = data?.error?.field;
 

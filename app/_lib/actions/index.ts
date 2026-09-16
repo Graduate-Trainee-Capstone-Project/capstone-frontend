@@ -7,20 +7,17 @@ import {
   mockGetProduct,
   mockGetProducts,
   mockGetSecurityCheckQuestions,
-  mockRequestBvnOtp,
   mockSaveDraft,
   mockStartApplication,
   mockSubmitSecurityCheck,
-  mockVerifyBvnOtp,
 } from "@/app/_lib/mocks/handlers";
 import type {
   ApiResult,
   ApplicationDraftResponse,
   FinalizeApplicationResponse,
+  LookupCustomerRequest,
+  LookupCustomerResponse,
   Product,
-  ProductsResponse,
-  RequestBvnOtpRequest,
-  RequestBvnOtpResponse,
   SaveDraftRequest,
   SaveDraftResponse,
   SecurityCheckQuestionsResponse,
@@ -28,8 +25,6 @@ import type {
   SecurityCheckResponse,
   StartApplicationRequest,
   StartApplicationResponse,
-  VerifyBvnOtpRequest,
-  VerifyBvnOtpResponse,
 } from "@/app/_types";
 
 /**
@@ -37,26 +32,28 @@ import type {
  * and never throws — same contract as apiRequest itself. TanStack Query wants
  * thrown errors, not returned ones, so each hook in _hooks/index.ts wraps the
  * matching action in a small throw-adapter rather than calling it directly.
- * Keeping the throw at the hook layer means these actions stay reusable from
- * anywhere else too (a Server Component, a plain form action) without dragging
- * TanStack-specific behavior into them.
  *
- * MOCKS_ENABLED: the real .NET API isn't reachable yet (API_URL is still a
- * placeholder). While that's true, every action routes to the in-memory mock
- * layer in app/_lib/mocks instead of apiRequest, so the whole flow — resume,
- * existing-customer detection, security checks — is demoable end to end.
- * Flip MOCK_MODE=false (and point API_URL at the real backend) to switch
- * every action below back to the real contract with zero call-site changes.
+ * MOCKS_ENABLED: when MOCK_MODE=true (or API_URL is still a placeholder),
+ * catalog/draft actions route to the in-memory mock layer.
+ *
+ * MOCK_SECURITY_CHECK: security questions + submit stay mocked even against
+ * a live API until BE wires those routes. Set MOCK_SECURITY_CHECK=false to
+ * hit GET/POST /applications/{draftId}/security-check...
+ *
+ * Customer lookup is never mocked — OTP is client-side; the lookup itself
+ * must hit the real store so created customers can be found.
  */
 const MOCKS_ENABLED =
   process.env.MOCK_MODE === "true" ||
   (process.env.MOCK_MODE !== "false" &&
     (!process.env.API_URL || process.env.API_URL.includes("api.example.com")));
 
+const MOCK_SECURITY_CHECK = MOCKS_ENABLED || process.env.MOCK_SECURITY_CHECK !== "false";
+
 // GET /products
-export async function getProductsAction(): Promise<ApiResult<ProductsResponse>> {
+export async function getProductsAction(): Promise<ApiResult<Product[]>> {
   if (MOCKS_ENABLED) return mockGetProducts();
-  return apiRequest.get<ProductsResponse>("/products");
+  return apiRequest.get<Product[]>("/products");
 }
 
 // GET /products/{productCode}
@@ -94,7 +91,7 @@ export async function saveDraftAction(
 export async function getSecurityCheckQuestionsAction(
   draftId: string,
 ): Promise<ApiResult<SecurityCheckQuestionsResponse>> {
-  if (MOCKS_ENABLED) return mockGetSecurityCheckQuestions(draftId);
+  if (MOCK_SECURITY_CHECK) return mockGetSecurityCheckQuestions(draftId);
   return apiRequest.get<SecurityCheckQuestionsResponse>(
     `/applications/${draftId}/security-check/questions`,
   );
@@ -105,7 +102,7 @@ export async function submitSecurityCheckAction(
   draftId: string,
   input: SecurityCheckRequest,
 ): Promise<ApiResult<SecurityCheckResponse>> {
-  if (MOCKS_ENABLED) return mockSubmitSecurityCheck(draftId, input);
+  if (MOCK_SECURITY_CHECK) return mockSubmitSecurityCheck(draftId, input);
   return apiRequest.post<SecurityCheckResponse>(`/applications/${draftId}/security-check`, input);
 }
 
@@ -117,18 +114,9 @@ export async function finalizeApplicationAction(
   return apiRequest.post<FinalizeApplicationResponse>(`/applications/${draftId}/finalize`, {});
 }
 
-// POST /existing-customer/bvn-otp/request — product-agnostic cross-subsidiary lookup, step 1.
-export async function requestBvnOtpAction(
-  input: RequestBvnOtpRequest,
-): Promise<ApiResult<RequestBvnOtpResponse>> {
-  if (MOCKS_ENABLED) return mockRequestBvnOtp(input);
-  return apiRequest.post<RequestBvnOtpResponse>("/existing-customer/bvn-otp/request", input);
-}
-
-// POST /existing-customer/bvn-otp/verify — step 2, returns matched profile formData if found.
-export async function verifyBvnOtpAction(
-  input: VerifyBvnOtpRequest,
-): Promise<ApiResult<VerifyBvnOtpResponse>> {
-  if (MOCKS_ENABLED) return mockVerifyBvnOtp(input);
-  return apiRequest.post<VerifyBvnOtpResponse>("/existing-customer/bvn-otp/verify", input);
+// POST /customers/lookup — never mocked. See docs/customer-lookup-contract.md.
+export async function lookupCustomerAction(
+  input: LookupCustomerRequest,
+): Promise<ApiResult<LookupCustomerResponse>> {
+  return apiRequest.post<LookupCustomerResponse>("/customers/lookup", input);
 }

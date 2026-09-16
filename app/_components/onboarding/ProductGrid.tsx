@@ -53,9 +53,29 @@ export function ProductGrid() {
     );
   }
 
+  if (data.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-4 rounded-2xl border border-grey-200 bg-white p-10 text-center">
+        <p className="text-sm text-grey-600">No products are available right now.</p>
+        <Button
+          onClick={() => {
+            toast.promise(refetch(), {
+              loading: "Retrying...",
+              success: "Products loaded.",
+              error: "Still couldn't reach the server.",
+            });
+          }}
+          isLoading={isRefetching}
+        >
+          Try again
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {data.products.map((product) => (
+      {data.map((product) => (
         <ProductCard key={product.productId} product={product} onSelect={handleSelect} />
       ))}
     </div>

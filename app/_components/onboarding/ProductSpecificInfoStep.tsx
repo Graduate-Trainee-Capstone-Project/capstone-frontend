@@ -1,6 +1,7 @@
 "use client";
 
-import {useState} from "react";
+import {useEffect, useRef, useState} from "react";
+import {useRouter} from "next/navigation";
 import toast from "react-hot-toast";
 import {useProduct, useSaveDraft} from "@/app/_hooks";
 import {useOnboardingStore} from "@/app/_hooks/useOnboardingStore";
@@ -9,6 +10,9 @@ import {Select} from "@/app/_ui/Select";
 import {Checkbox} from "@/app/_ui/Checkbox";
 import {Button} from "@/app/_ui/Button";
 import {Skeleton} from "@/app/_ui/Skeleton";
+import {debounce} from "@/app/_utils/debounce";
+import {readSchemaField, toBackendProductFormData} from "@/app/_utils/formData";
+import {AUTOSAVE_DEBOUNCE_MS, ROUTES} from "@/app/_constants";
 import type {AdditionalField} from "@/app/_types";
 
 function initialValueFor(field: AdditionalField, cached: unknown): string | boolean {
@@ -22,25 +26,52 @@ function initialValueFor(field: AdditionalField, cached: unknown): string | bool
  * branch preference" is data, not a switch on productCode.
  */
 export function ProductSpecificInfoStep() {
+  const router = useRouter();
   const productCode = useOnboardingStore((state) => state.productCode);
   const draftId = useOnboardingStore((state) => state.draftId);
   const cachedFormData = useOnboardingStore((state) => state.formData);
   const patchFormData = useOnboardingStore((state) => state.patchFormData);
   const setCurrentStep = useOnboardingStore((state) => state.setCurrentStep);
+  const resetStore = useOnboardingStore((state) => state.reset);
 
   const {data: product, isLoading, isError} = useProduct(productCode ?? undefined);
   const saveDraft = useSaveDraft(draftId ?? "");
 
   const schema = product?.additionalFieldsSchema ?? [];
 
-  const [values, setValues] = useState<Record<string, string | boolean>>(() => {
-    const initial: Record<string, string | boolean> = {};
-    for (const field of schema) {
-      initial[field.field] = initialValueFor(field, cachedFormData[field.field]);
-    }
-    return initial;
-  });
+  const [values, setValues] = useState<Record<string, string | boolean>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const pendingChangesRef = useRef<Record<string, unknown>>({});
+
+  useEffect(() => {
+    const fields = product?.additionalFieldsSchema;
+    if (!fields?.length) return;
+    setValues((prev) => {
+      const next = {...prev};
+      for (const field of fields) {
+        if (next[field.field] === undefined) {
+          next[field.field] = initialValueFor(field, readSchemaField(cachedFormData, field.field));
+        }
+      }
+      return next;
+    });
+  }, [product, cachedFormData]);
+
+  const debouncedAutosaveRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    debouncedAutosaveRef.current = debounce(() => {
+      const changes = pendingChangesRef.current;
+      if (Object.keys(changes).length === 0 || !draftId) return;
+      pendingChangesRef.current = {};
+      patchFormData(changes);
+      saveDraft.mutate({
+        currentStep: "PRODUCT_SPECIFIC_INFO",
+        formData: toBackendProductFormData(changes),
+        channel: "WEB",
+      });
+    }, AUTOSAVE_DEBOUNCE_MS);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftId]);
 
   if (!draftId) {
     return <p className="text-sm text-error-400">Your session expired. Please start again.</p>;
@@ -63,6 +94,18 @@ export function ProductSpecificInfoStep() {
   function updateField(field: string, value: string | boolean) {
     setValues((prev) => ({...prev, [field]: value}));
     setErrors((prev) => ({...prev, [field]: ""}));
+    pendingChangesRef.current = {...pendingChangesRef.current, [field]: value};
+  }
+
+  function handleBlur() {
+    debouncedAutosaveRef.current();
+  }
+
+  function flushPendingChangesNow(): Record<string, unknown> {
+    const changes = pendingChangesRef.current;
+    pendingChangesRef.current = {};
+    if (Object.keys(changes).length > 0) patchFormData(changes);
+    return changes;
   }
 
   function validate(): boolean {
@@ -77,13 +120,37 @@ export function ProductSpecificInfoStep() {
     return Object.keys(nextErrors).length === 0;
   }
 
+  function handleSaveAndContinueLater() {
+    const changes = flushPendingChangesNow();
+    saveDraft.mutate(
+      {
+        currentStep: "PRODUCT_SPECIFIC_INFO",
+        formData: toBackendProductFormData(changes),
+        channel: "WEB",
+      },
+      {
+        onSuccess: () => {
+          toast.success("Saved — come back anytime with your details to pick up where you left off.");
+          resetStore();
+          router.push(ROUTES.home);
+        },
+        onError: (error) => toast.error(error.message || "Couldn't save right now. Please try again."),
+      },
+    );
+  }
+
   function handleContinue(event: React.FormEvent) {
     event.preventDefault();
     if (!validate()) return;
 
+    const changes = flushPendingChangesNow();
     patchFormData(values);
     saveDraft.mutate(
-      {currentStep: "DOCUMENT_UPLOAD", formData: values, channel: "WEB"},
+      {
+        currentStep: "DOCUMENT_UPLOAD",
+        formData: toBackendProductFormData({...values, ...changes}),
+        channel: "WEB",
+      },
       {
         onSuccess: (data) => setCurrentStep(data.currentStep),
         onError: (error) => toast.error(error.message || "Couldn't save right now. Please try again."),
@@ -92,7 +159,7 @@ export function ProductSpecificInfoStep() {
   }
 
   return (
-    <form onSubmit={handleContinue} className="flex flex-col gap-6">
+    <form onSubmit={handleContinue} className="flex flex-col gap-6" onBlur={handleBlur}>
       <div className="flex flex-col gap-1">
         <h2 className="text-xl font-semibold text-grey-900">{product.productName} details</h2>
         <p className="text-sm text-grey-600">A few extra details specific to this product.</p>
@@ -151,7 +218,15 @@ export function ProductSpecificInfoStep() {
         </div>
       )}
 
-      <div className="flex justify-end">
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={handleSaveAndContinueLater}
+          isLoading={saveDraft.isPending}
+        >
+          Save and continue later
+        </Button>
         <Button type="submit" isLoading={saveDraft.isPending}>
           Continue
         </Button>

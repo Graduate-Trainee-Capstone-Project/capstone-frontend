@@ -65,12 +65,6 @@ export interface Product {
   productName: string;
   requiredIdentifiers: IdentifierType[];
   additionalFieldsSchema: AdditionalField[];
-  /** Drives "coming soon" styling on the product grid — never branch on productCode instead. */
-  isActive: boolean;
-}
-
-export interface ProductsResponse {
-  products: Product[];
 }
 
 // ─── POST /applications/start ───
@@ -156,28 +150,23 @@ export interface FinalizeApplicationResponse {
   status: ApplicationStatus;
 }
 
-// ─── Cross-subsidiary "already a customer?" BVN lookup (product-agnostic) ───
-// Lets any product's identifier-capture screen offer an "ease onboarding"
-// shortcut: verify a BVN via OTP, then prefill formData from whatever
-// subsidiary the customer already has a profile with — independent of the
-// current product's own requiredIdentifiers.
+// ─── POST /customers/lookup ───
+// Product-agnostic "already a customer?" shortcut. OTP is client-side only;
+// after any 6-digit code is entered, the frontend calls this live endpoint
+// (never mocked). BE team: identifierType is the product's first required
+// identifier (often BVN, sometimes EMAIL / NIN / PHONE).
 
-export interface RequestBvnOtpRequest {
-  bvn: string;
+export interface LookupCustomerRequest {
+  identifierType: IdentifierType;
+  identifierValue: string;
 }
 
-export interface RequestBvnOtpResponse {
-  otpToken: string;
-  maskedPhone: string;
-}
-
-export interface VerifyBvnOtpRequest {
-  otpToken: string;
-  otp: string;
-  bvn: string;
-}
-
-export interface VerifyBvnOtpResponse {
+export interface LookupCustomerResponse {
   matched: boolean;
   formData?: Record<string, unknown>;
+}
+
+export interface DraftDocument {
+  type?: string | null;
+  url?: string | null;
 }

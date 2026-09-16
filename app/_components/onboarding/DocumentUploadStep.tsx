@@ -1,39 +1,50 @@
 "use client";
 
-import {useRef, useState} from "react";
+import {useEffect, useRef, useState} from "react";
+import {useRouter} from "next/navigation";
 import toast from "react-hot-toast";
 import {useSaveDraft} from "@/app/_hooks";
 import {useOnboardingStore} from "@/app/_hooks/useOnboardingStore";
 import {Button} from "@/app/_ui/Button";
 import {cn} from "@/app/_utils/cn";
-import {PRODUCT_DOCUMENT_SLOTS, type DocumentSlotConfig} from "@/app/_constants";
+import {documentsFromCache, toDocumentsPayload} from "@/app/_utils/formData";
+import {debounce} from "@/app/_utils/debounce";
+import {AUTOSAVE_DEBOUNCE_MS, PRODUCT_DOCUMENT_SLOTS, ROUTES, type DocumentSlotConfig} from "@/app/_constants";
 
 /**
  * No real storage backend for the demo — only the filename is captured and
- * sent to /save, standing in for an uploaded document reference. Which
- * slots render is entirely data-driven off PRODUCT_DOCUMENT_SLOTS, so a
- * product needing an extra document (e.g. Stockbroking's signature) never
- * requires a branch here.
+ * sent to /save as documents[]. Which slots render is data-driven off
+ * PRODUCT_DOCUMENT_SLOTS.
  */
 export function DocumentUploadStep() {
+  const router = useRouter();
   const draftId = useOnboardingStore((state) => state.draftId);
   const productCode = useOnboardingStore((state) => state.productCode);
   const cachedFormData = useOnboardingStore((state) => state.formData);
   const patchFormData = useOnboardingStore((state) => state.patchFormData);
   const setCurrentStep = useOnboardingStore((state) => state.setCurrentStep);
+  const resetStore = useOnboardingStore((state) => state.reset);
   const saveDraft = useSaveDraft(draftId ?? "");
 
   const documentSlots = productCode ? PRODUCT_DOCUMENT_SLOTS[productCode] : [];
 
-  const [names, setNames] = useState<Record<string, string>>(() => {
-    const initial: Record<string, string> = {};
-    for (const slot of documentSlots) {
-      initial[slot.key] = typeof cachedFormData[slot.key] === "string" ? (cachedFormData[slot.key] as string) : "";
-    }
-    return initial;
-  });
+  const [names, setNames] = useState<Record<string, string>>(() =>
+    documentsFromCache(cachedFormData, documentSlots),
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const pendingChangesRef = useRef<Record<string, unknown>>({});
+  const namesRef = useRef(names);
+  namesRef.current = names;
+
+  const debouncedAutosaveRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    debouncedAutosaveRef.current = debounce(() => {
+      if (!draftId) return;
+      const payload = toDocumentsPayload(namesRef.current, documentSlots);
+      patchFormData(payload);
+      saveDraft.mutate({currentStep: "DOCUMENT_UPLOAD", formData: payload, channel: "WEB"});
+    }, AUTOSAVE_DEBOUNCE_MS);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftId, productCode]);
 
   if (!draftId) {
     return <p className="text-sm text-error-400">Your session expired. Please start again.</p>;
@@ -43,7 +54,7 @@ export function DocumentUploadStep() {
     const name = file?.name ?? "";
     setNames((prev) => ({...prev, [key]: name}));
     setErrors((prev) => ({...prev, [key]: ""}));
-    if (name) pendingChangesRef.current = {...pendingChangesRef.current, [key]: name};
+    if (name) debouncedAutosaveRef.current();
   }
 
   function validate(): boolean {
@@ -55,21 +66,32 @@ export function DocumentUploadStep() {
     return Object.keys(nextErrors).length === 0;
   }
 
-  function handleContinue(event: React.FormEvent) {
-    event.preventDefault();
-    if (!validate()) return;
-
-    const changes = pendingChangesRef.current;
-    pendingChangesRef.current = {};
-    if (Object.keys(changes).length > 0) patchFormData(changes);
-
+  function saveDocuments(nextStep: "DOCUMENT_UPLOAD" | "REVIEW", onSuccess: (currentStep: typeof nextStep) => void) {
+    const payload = toDocumentsPayload(names, documentSlots);
+    patchFormData(payload);
     saveDraft.mutate(
-      {currentStep: "REVIEW", formData: changes, channel: "WEB"},
+      {currentStep: nextStep, formData: payload, channel: "WEB"},
       {
-        onSuccess: (data) => setCurrentStep(data.currentStep),
+        onSuccess: (data) => onSuccess(data.currentStep as typeof nextStep),
         onError: (error) => toast.error(error.message || "Couldn't save right now. Please try again."),
       },
     );
+  }
+
+  function handleSaveAndContinueLater() {
+    saveDocuments("DOCUMENT_UPLOAD", () => {
+      toast.success("Saved — come back anytime with your details to pick up where you left off.");
+      resetStore();
+      router.push(ROUTES.home);
+    });
+  }
+
+  function handleContinue(event: React.FormEvent) {
+    event.preventDefault();
+    if (!validate()) return;
+    saveDocuments("REVIEW", (currentStep) => {
+      setCurrentStep(currentStep);
+    });
   }
 
   return (
@@ -111,7 +133,15 @@ export function DocumentUploadStep() {
         ))}
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={handleSaveAndContinueLater}
+          isLoading={saveDraft.isPending}
+        >
+          Save and continue later
+        </Button>
         <Button type="submit" isLoading={saveDraft.isPending}>
           Continue
         </Button>

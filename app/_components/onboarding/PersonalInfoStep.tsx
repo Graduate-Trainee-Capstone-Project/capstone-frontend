@@ -11,6 +11,7 @@ import {Button} from "@/app/_ui/Button";
 import {debounce} from "@/app/_utils/debounce";
 import {isRequired} from "@/app/_utils/validators";
 import {AUTOSAVE_DEBOUNCE_MS, ROUTES} from "@/app/_constants";
+import {withDefaultNationality} from "@/app/_utils/formData";
 
 interface PersonalInfoFormData {
   firstName: string;
@@ -18,7 +19,6 @@ interface PersonalInfoFormData {
   lastName: string;
   dateOfBirth: string;
   gender: string;
-  nationality: string;
   address: {street: string; city: string; state: string};
   nextOfKin: {fullName: string; relationship: string; phone: string};
 }
@@ -38,7 +38,6 @@ function buildInitialFormData(cached: Record<string, unknown>): PersonalInfoForm
     lastName: (cached.lastName as string) ?? "",
     dateOfBirth: (cached.dateOfBirth as string) ?? "",
     gender: (cached.gender as string) ?? "",
-    nationality: (cached.nationality as string) ?? "",
     address: {street: address.street ?? "", city: address.city ?? "", state: address.state ?? ""},
     nextOfKin: {
       fullName: nextOfKin.fullName ?? "",
@@ -74,8 +73,12 @@ export function PersonalInfoStep() {
       const changes = pendingChangesRef.current;
       if (Object.keys(changes).length === 0 || !draftId) return;
       pendingChangesRef.current = {};
-      patchFormData(changes);
-      saveDraft.mutate({currentStep: "PERSONAL_INFO", formData: changes, channel: "WEB"});
+      patchFormData(withDefaultNationality(changes));
+      saveDraft.mutate({
+        currentStep: "PERSONAL_INFO",
+        formData: withDefaultNationality(changes),
+        channel: "WEB",
+      });
     }, AUTOSAVE_DEBOUNCE_MS);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftId]);
@@ -108,7 +111,7 @@ export function PersonalInfoStep() {
   function flushPendingChangesNow(): Record<string, unknown> {
     const changes = pendingChangesRef.current;
     pendingChangesRef.current = {};
-    if (Object.keys(changes).length > 0) patchFormData(changes);
+    if (Object.keys(changes).length > 0) patchFormData(withDefaultNationality(changes));
     return changes;
   }
 
@@ -126,7 +129,7 @@ export function PersonalInfoStep() {
     if (!draftId) return;
     const changes = flushPendingChangesNow();
     saveDraft.mutate(
-      {currentStep: "PERSONAL_INFO", formData: changes, channel: "WEB"},
+      {currentStep: "PERSONAL_INFO", formData: withDefaultNationality(changes), channel: "WEB"},
       {
         onSuccess: () => {
           toast.success("Saved — come back anytime with your details to pick up where you left off.");
@@ -145,7 +148,7 @@ export function PersonalInfoStep() {
 
     const changes = flushPendingChangesNow();
     saveDraft.mutate(
-      {currentStep: "PRODUCT_SPECIFIC_INFO", formData: changes, channel: "WEB"},
+      {currentStep: "PRODUCT_SPECIFIC_INFO", formData: withDefaultNationality(changes), channel: "WEB"},
       {
         onSuccess: (data) => setCurrentStep(data.currentStep),
         onError: (error) => toast.error(error.message || "Couldn't save right now. Please try again."),
@@ -201,12 +204,6 @@ export function PersonalInfoStep() {
           onChange={(e) => updateField("gender", e.target.value)}
           error={errors.gender}
           required
-        />
-        <Input
-          label="Nationality"
-          name="nationality"
-          value={formData.nationality}
-          onChange={(e) => updateField("nationality", e.target.value)}
         />
       </div>
 

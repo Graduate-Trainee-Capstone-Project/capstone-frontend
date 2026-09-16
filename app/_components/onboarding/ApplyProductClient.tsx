@@ -46,7 +46,11 @@ export function ApplyProductClient({productCode}: ApplyProductClientProps) {
   useEffect(() => {
     if (!applicationQuery.error) return;
     if (applicationQuery.error instanceof ApiRequestError) {
-      if (applicationQuery.error.code === "DRAFT_ALREADY_SUBMITTED") {
+      const message = applicationQuery.error.message;
+      if (
+        applicationQuery.error.code === "DRAFT_ALREADY_SUBMITTED" ||
+        /already submitted|not in progress/i.test(message)
+      ) {
         toast("This application was already submitted.");
       }
     }

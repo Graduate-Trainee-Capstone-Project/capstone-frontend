@@ -55,7 +55,6 @@ export const mockProducts: Product[] = [
     additionalFieldsSchema: [
       {field: "branchPreference", label: "Preferred branch", type: "text", required: false},
     ],
-    isActive: true,
   },
   {
     productId: "prod-current",
@@ -65,7 +64,6 @@ export const mockProducts: Product[] = [
     additionalFieldsSchema: [
       {field: "chequeBookRequested", label: "Request a cheque book", type: "checkbox", required: false},
     ],
-    isActive: true,
   },
   {
     productId: "prod-pension",
@@ -107,7 +105,6 @@ export const mockProducts: Product[] = [
         required: true,
       },
     ],
-    isActive: true,
   },
   {
     productId: "prod-stockbroking",
@@ -130,7 +127,6 @@ export const mockProducts: Product[] = [
       {field: "existingBankAccountNumber", label: "Account number", type: "text", required: false},
       {field: "riskProfile", label: "Risk profile", type: "text", required: false},
     ],
-    isActive: true,
   },
   {
     productId: "prod-insurance",
@@ -138,7 +134,6 @@ export const mockProducts: Product[] = [
     productName: "Insurance",
     requiredIdentifiers: ["EMAIL", "PHONE"],
     additionalFieldsSchema: [{field: "policyType", label: "Policy type", type: "text", required: false}],
-    isActive: false,
   },
 ];
 
