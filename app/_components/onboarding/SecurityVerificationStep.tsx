@@ -3,7 +3,7 @@
 import {useState} from "react";
 import {useSaveDraft} from "@/app/_hooks";
 import {useOnboardingStore} from "@/app/_hooks/useOnboardingStore";
-import {Modal} from "@/app/_components/ui/Modal";
+import {Modal} from "@/app/_ui/Modal";
 import {SecurityQuestionModal} from "@/app/_components/onboarding/SecurityQuestionModal";
 import {FacialCaptureModal} from "@/app/_components/onboarding/FacialCaptureModal";
 

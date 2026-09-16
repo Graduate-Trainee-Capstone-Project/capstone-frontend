@@ -1,5 +1,5 @@
 import Link from "next/link";
-import {Icon} from "@/app/_components/ui/Icon";
+import {Icon} from "@/app/_ui/Icon";
 
 interface SubsidiaryDetailCardProps {
   accentClassName: string;

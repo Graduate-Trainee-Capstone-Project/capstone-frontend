@@ -4,7 +4,7 @@ import {useRef, useState} from "react";
 import toast from "react-hot-toast";
 import {useSaveDraft} from "@/app/_hooks";
 import {useOnboardingStore} from "@/app/_hooks/useOnboardingStore";
-import {Button} from "@/app/_components/ui/Button";
+import {Button} from "@/app/_ui/Button";
 import {cn} from "@/app/_utils/cn";
 import {PRODUCT_DOCUMENT_SLOTS, type DocumentSlotConfig} from "@/app/_constants";
 

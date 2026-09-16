@@ -6,8 +6,8 @@ import {ApiRequestError, useProduct, useStartApplication} from "@/app/_hooks";
 import {useOnboardingStore} from "@/app/_hooks/useOnboardingStore";
 import {IdentifierField} from "@/app/_components/onboarding/IdentifierField";
 import {ExistingCustomerBanner} from "@/app/_components/onboarding/ExistingCustomerBanner";
-import {Button} from "@/app/_components/ui/Button";
-import {Skeleton} from "@/app/_components/ui/Skeleton";
+import {Button} from "@/app/_ui/Button";
+import {Skeleton} from "@/app/_ui/Skeleton";
 import {normalizePhone, validateIdentifier} from "@/app/_utils/validators";
 import type {IdentifierType, ProductCode} from "@/app/_types";
 

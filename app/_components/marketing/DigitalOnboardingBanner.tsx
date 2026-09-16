@@ -1,5 +1,5 @@
 import Link from "next/link";
-import {Icon} from "@/app/_components/ui/Icon";
+import {Icon} from "@/app/_ui/Icon";
 import {ROUTES} from "@/app/_constants";
 
 const STEPS = ["Verify BVN / NIN", "Select Desired Units", "Instant Account Activation"];

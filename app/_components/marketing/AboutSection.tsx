@@ -1,5 +1,5 @@
 import Image from "next/image";
-import {Icon} from "@/app/_components/ui/Icon";
+import {Icon} from "@/app/_ui/Icon";
 
 const STATS = [
   {icon: "lucide:layers", value: "10 Subsidiaries", caption: "Full-spectrum ecosystem"},

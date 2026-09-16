@@ -1,4 +1,4 @@
-import {Icon} from "@/app/_components/ui/Icon";
+import {Icon} from "@/app/_ui/Icon";
 
 const ALLOCATION = [
   {label: "Banking 48%", color: "bg-primary-500", width: "48%"},

@@ -1,4 +1,4 @@
-import {Icon} from "@/app/_components/ui/Icon";
+import {Icon} from "@/app/_ui/Icon";
 
 const STATS = [
   {

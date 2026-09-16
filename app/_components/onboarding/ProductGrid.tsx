@@ -5,8 +5,8 @@ import toast from "react-hot-toast";
 import {useProducts} from "@/app/_hooks";
 import {useOnboardingStore} from "@/app/_hooks/useOnboardingStore";
 import {ProductCard} from "@/app/_components/onboarding/ProductCard";
-import {Skeleton} from "@/app/_components/ui/Skeleton";
-import {Button} from "@/app/_components/ui/Button";
+import {Skeleton} from "@/app/_ui/Skeleton";
+import {Button} from "@/app/_ui/Button";
 import {ROUTES} from "@/app/_constants";
 import type {Product} from "@/app/_types";
 

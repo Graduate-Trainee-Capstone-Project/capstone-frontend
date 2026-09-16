@@ -4,9 +4,9 @@ import {useState} from "react";
 import toast from "react-hot-toast";
 import {useFinalizeApplication, useProduct} from "@/app/_hooks";
 import {useOnboardingStore} from "@/app/_hooks/useOnboardingStore";
-import {Button} from "@/app/_components/ui/Button";
-import {Checkbox} from "@/app/_components/ui/Checkbox";
-import {Skeleton} from "@/app/_components/ui/Skeleton";
+import {Button} from "@/app/_ui/Button";
+import {Checkbox} from "@/app/_ui/Checkbox";
+import {Skeleton} from "@/app/_ui/Skeleton";
 import {PRODUCT_DOCUMENT_SLOTS} from "@/app/_constants";
 
 interface SummaryRow {

@@ -3,10 +3,10 @@
 import {useState} from "react";
 import toast from "react-hot-toast";
 import {useRequestBvnOtp, useVerifyBvnOtp} from "@/app/_hooks";
-import {Modal} from "@/app/_components/ui/Modal";
-import {Input} from "@/app/_components/ui/Input";
-import {Checkbox} from "@/app/_components/ui/Checkbox";
-import {Button} from "@/app/_components/ui/Button";
+import {Modal} from "@/app/_ui/Modal";
+import {Input} from "@/app/_ui/Input";
+import {Checkbox} from "@/app/_ui/Checkbox";
+import {Button} from "@/app/_ui/Button";
 import {isValidBVN} from "@/app/_utils/validators";
 
 interface CrossProductLookupModalProps {

@@ -1,6 +1,6 @@
 "use client";
 
-import {Input} from "@/app/_components/ui/Input";
+import {Input} from "@/app/_ui/Input";
 import {IDENTIFIER_META} from "@/app/_constants";
 import type {IdentifierType} from "@/app/_types";
 

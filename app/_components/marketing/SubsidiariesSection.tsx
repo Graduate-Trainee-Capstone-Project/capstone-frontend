@@ -1,4 +1,4 @@
-import {Icon} from "@/app/_components/ui/Icon";
+import {Icon} from "@/app/_ui/Icon";
 import {SubsidiaryDetailCard} from "@/app/_components/marketing/SubsidiaryDetailCard";
 import {ROUTES} from "@/app/_constants";
 
