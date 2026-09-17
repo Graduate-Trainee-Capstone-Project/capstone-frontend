@@ -3,16 +3,40 @@
 import {useState} from "react";
 import toast from "react-hot-toast";
 import {ApiRequestError, useProduct, useStartApplication} from "@/app/_hooks";
+import {saveDraftAction} from "@/app/_lib/actions";
 import {useOnboardingStore} from "@/app/_hooks/useOnboardingStore";
 import {IdentifierField} from "@/app/_components/onboarding/IdentifierField";
 import {ExistingCustomerBanner} from "@/app/_components/onboarding/ExistingCustomerBanner";
 import {Button} from "@/app/_ui/Button";
 import {Skeleton} from "@/app/_ui/Skeleton";
 import {normalizePhone, validateIdentifier} from "@/app/_utils/validators";
-import type {IdentifierType, ProductCode} from "@/app/_types";
+import type {DraftStep, ExistingCustomerData, IdentifierType, ProductCode, SaveDraftRequest} from "@/app/_types";
 
 interface IdentifierCaptureStepProps {
   productCode: ProductCode;
+}
+
+/**
+ * existingCustomer is only ever returned ONCE, at the moment /start first
+ * matches a customer for a new product — it's never re-sent on resume. If
+ * the user abandons before PersonalInfoStep saves anything, that profile
+ * data would otherwise be gone for good on a later resume. Persisting it
+ * into the draft immediately (still on SECURITY_VERIFICATION) makes it
+ * durable, so a resumed draft's own formData carries it forward instead.
+ */
+function toExistingCustomerSavePayload(existing: ExistingCustomerData, currentStep: DraftStep): SaveDraftRequest {
+  return {
+    currentStep,
+    channel: "WEB",
+    firstName: existing.firstName || undefined,
+    middleName: existing.middleName || undefined,
+    lastName: existing.lastName || undefined,
+    dateOfBirth: existing.dateOfBirth || undefined,
+    gender: existing.gender || undefined,
+    phoneNumber: existing.phoneNumber || undefined,
+    email: existing.email || undefined,
+    street: existing.address || undefined,
+  };
 }
 
 export function IdentifierCaptureStep({productCode}: IdentifierCaptureStepProps) {
@@ -79,6 +103,12 @@ export function IdentifierCaptureStep({productCode}: IdentifierCaptureStepProps)
             toast.success("Welcome back — resuming your application.");
           } else if (data.isExistingCustomer) {
             toast("We found an existing profile — a quick verification is needed.");
+          }
+
+          // Fire-and-forget: persist existingCustomer's prefill into the
+          // draft now, while we still have it — see toExistingCustomerSavePayload.
+          if (data.existingCustomer) {
+            void saveDraftAction(data.draftId, toExistingCustomerSavePayload(data.existingCustomer, data.currentStep));
           }
         },
         onError: (error) => {
