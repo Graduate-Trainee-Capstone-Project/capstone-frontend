@@ -226,7 +226,7 @@ export function getSecurityCheckAttempts(draftId: string): Record<SecurityCheckT
   return attempts;
 }
 
-function toSingleAddressString(address?: AddressInfo[]): string | null {
+function toSingleAddressString(address?: AddressInfo[] | null): string | null {
   const first = address?.[0];
   if (!first) return null;
   const parts = [first.houseNumber, first.street, first.city, first.state, first.country].filter(Boolean);

@@ -94,7 +94,7 @@ export interface DraftFormData {
   gender?: string;
   email?: string;
   phoneNumber?: string;
-  address?: AddressInfo[];
+  address?: AddressInfo[] | null;
   accountType?: string;
   initialDeposit?: number;
   currency?: string;
