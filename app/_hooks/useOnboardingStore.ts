@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import {create} from "zustand";
-import {persist} from "zustand/middleware";
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type {
   DraftFormData,
   DraftStep,
@@ -9,7 +9,7 @@ import type {
   FinalizeApplicationResponse,
   ProductCode,
   StartApplicationResponse,
-} from "@/app/_types";
+} from '@/app/_types';
 
 /**
  * New existing-customer starts come back with empty formData and the profile
@@ -17,7 +17,9 @@ import type {
  * reads from. `address` is a single street string on existingCustomer (not
  * our {street, city, state} shape), so it lands in address[0].street only.
  */
-function prefillFromExistingCustomer(existing: ExistingCustomerData): Partial<DraftFormData> {
+function prefillFromExistingCustomer(
+  existing: ExistingCustomerData,
+): Partial<DraftFormData> {
   const prefill: Partial<DraftFormData> = {
     firstName: existing.firstName,
     lastName: existing.lastName,
@@ -27,7 +29,8 @@ function prefillFromExistingCustomer(existing: ExistingCustomerData): Partial<Dr
   if (existing.gender) prefill.gender = existing.gender;
   if (existing.phoneNumber) prefill.phoneNumber = existing.phoneNumber;
   if (existing.email) prefill.email = existing.email;
-  if (existing.address) prefill.address = [{street: existing.address, city: "", state: ""}];
+  if (existing.address)
+    prefill.address = [{ street: existing.address, city: '', state: '' }];
   return prefill;
 }
 
@@ -38,23 +41,34 @@ function prefillFromExistingCustomer(existing: ExistingCustomerData): Partial<Dr
  * merge would drop previously-saved sibling fields (e.g. saving a new
  * `street` alone would blank out `city`/`state` in the store).
  */
-function mergeFormData(base: DraftFormData, partial: Partial<DraftFormData>): DraftFormData {
-  const merged: DraftFormData = {...base, ...partial};
+function mergeFormData(
+  base: DraftFormData,
+  partial: Partial<DraftFormData>,
+): DraftFormData {
+  const merged: DraftFormData = { ...base, ...partial };
 
-  if (partial.address !== undefined) {
+  if (partial.address) {
     const prevAddress = base.address?.[0] ?? {};
     const nextAddress = partial.address[0] ?? {};
-    merged.address = [{...prevAddress, ...nextAddress}];
+    merged.address = [{ ...prevAddress, ...nextAddress }];
+  } else {
+    merged.address = base.address;
   }
 
-  if (partial.nextOfKin !== undefined) {
-    merged.nextOfKin = {...base.nextOfKin, ...partial.nextOfKin};
+  if (partial.nextOfKin) {
+    merged.nextOfKin = { ...base.nextOfKin, ...partial.nextOfKin };
+  } else {
+    merged.nextOfKin = base.nextOfKin;
   }
 
   return merged;
 }
 
-type SecurityCheckSubStep = "OTP" | "SECURITY_QUESTION" | "FACIAL_RECOGNITION" | null;
+type SecurityCheckSubStep =
+  | 'OTP'
+  | 'SECURITY_QUESTION'
+  | 'FACIAL_RECOGNITION'
+  | null;
 
 interface OnboardingState {
   productCode: ProductCode | null;
@@ -74,7 +88,10 @@ interface OnboardingState {
    */
   finalizeResult: FinalizeApplicationResponse | null;
 
-  setFromStartResponse: (response: StartApplicationResponse, productCode: ProductCode) => void;
+  setFromStartResponse: (
+    response: StartApplicationResponse,
+    productCode: ProductCode,
+  ) => void;
   setCurrentStep: (step: DraftStep) => void;
   patchFormData: (partial: Partial<DraftFormData>) => void;
   setSecurityCheckSubStep: (subStep: SecurityCheckSubStep) => void;
@@ -93,12 +110,12 @@ const INITIAL_STATE = {
   finalizeResult: null,
 } satisfies Omit<
   OnboardingState,
-  | "setFromStartResponse"
-  | "setCurrentStep"
-  | "patchFormData"
-  | "setSecurityCheckSubStep"
-  | "setFinalizeResult"
-  | "reset"
+  | 'setFromStartResponse'
+  | 'setCurrentStep'
+  | 'patchFormData'
+  | 'setSecurityCheckSubStep'
+  | 'setFinalizeResult'
+  | 'reset'
 >;
 
 export const useOnboardingStore = create<OnboardingState>()(
@@ -131,22 +148,27 @@ export const useOnboardingStore = create<OnboardingState>()(
           // this, the screen renders with no sub-step set and no modal ever
           // opens, leaving the user stuck with nothing to interact with.
           securityCheckSubStep:
-            response.requiresSecurityCheck || response.currentStep === "SECURITY_VERIFICATION" ? "OTP" : null,
+            response.requiresSecurityCheck ||
+            response.currentStep === 'SECURITY_VERIFICATION'
+              ? 'OTP'
+              : null,
         });
       },
 
-      setCurrentStep: (step) => set({currentStep: step}),
+      setCurrentStep: (step) => set({ currentStep: step }),
 
-      patchFormData: (partial) => set((state) => ({formData: mergeFormData(state.formData, partial)})),
+      patchFormData: (partial) =>
+        set((state) => ({ formData: mergeFormData(state.formData, partial) })),
 
-      setSecurityCheckSubStep: (subStep) => set({securityCheckSubStep: subStep}),
+      setSecurityCheckSubStep: (subStep) =>
+        set({ securityCheckSubStep: subStep }),
 
-      setFinalizeResult: (result) => set({finalizeResult: result}),
+      setFinalizeResult: (result) => set({ finalizeResult: result }),
 
       reset: () => set(INITIAL_STATE),
     }),
     {
-      name: "onboarding-draft",
+      name: 'onboarding-draft',
       // Only what's needed to resume a same-tab reload — everything else
       // (isExistingCustomer, requiresSecurityCheck, sub-step) is re-derived
       // from the server via GET /applications/{draftId} or a fresh /start.
