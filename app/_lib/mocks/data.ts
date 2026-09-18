@@ -72,7 +72,7 @@ export const mockProducts: Product[] = [
     productId: "prod-pension",
     productCode: "PENSION_RSA",
     productName: "Pension (RSA)",
-    requiredIdentifiers: ["NIN", "PHONE"],
+    requiredIdentifiers: ["BVN", "NIN"],
     additionalFieldsSchema: [
       {
         field: "title",
@@ -134,9 +134,25 @@ export const mockProducts: Product[] = [
   {
     productId: "prod-insurance",
     productCode: "INSURANCE",
-    productName: "Insurance",
-    requiredIdentifiers: ["EMAIL", "PHONE"],
-    additionalFieldsSchema: [{field: "policyType", label: "Policy type", type: "text", required: false}],
+    productName: "Investment account",
+    requiredIdentifiers: ["BVN", "PHONE"],
+    additionalFieldsSchema: [
+      {
+        field: "fundType",
+        label: "Fund type",
+        type: "select",
+        options: ["Money Market", "Fixed Income", "Equity", "Balanced"],
+        required: true,
+      },
+      {
+        field: "riskAppetite",
+        label: "Risk appetite",
+        type: "select",
+        options: ["Conservative", "Moderate", "Aggressive"],
+        required: true,
+      },
+      {field: "initialInvestment", label: "Initial investment (NGN)", type: "number", required: true},
+    ],
   },
 ];
 
@@ -165,7 +181,8 @@ mockIdentifierIndex.set("BVN:12345678901", {
     gender: "FEMALE",
     nationality: "Nigerian",
     address: [{street: "12 Marina Rd", city: "Lagos", state: "Lagos"}],
-    nextOfKin: {fullName: "Chidi Okonkwo", relationship: "Sibling", phone: "+2348012345678"},
+    email: "adaeze.okonkwo@example.com",
+    phoneNumber: "+2348012345678",
   },
 });
 mockIdentifierIndex.set("NIN:98765432109", {

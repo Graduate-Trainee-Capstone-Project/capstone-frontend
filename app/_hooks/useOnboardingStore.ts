@@ -30,16 +30,18 @@ function prefillFromExistingCustomer(
   if (existing.phoneNumber) prefill.phoneNumber = existing.phoneNumber;
   if (existing.email) prefill.email = existing.email;
   if (existing.address)
-    prefill.address = [{ street: existing.address, city: '', state: '' }];
+    prefill.address = [
+      { houseNumber: '', street: existing.address, city: '', state: '' },
+    ];
   return prefill;
 }
 
 /**
- * Shallow-merges top-level formData keys, but deep-merges the nested groups
- * (address, nextOfKin) instead of overwriting them wholesale — autosave only
- * ever sends the fields changed since the last save, so a plain shallow
- * merge would drop previously-saved sibling fields (e.g. saving a new
- * `street` alone would blank out `city`/`state` in the store).
+ * Shallow-merges top-level formData keys, but deep-merges address instead
+ * of overwriting it wholesale — autosave only ever sends the fields
+ * changed since the last save, so a plain shallow merge would drop
+ * previously-saved sibling fields (e.g. saving a new `street` alone
+ * would blank out `city`/`state` in the store).
  */
 function mergeFormData(
   base: DraftFormData,
@@ -53,12 +55,6 @@ function mergeFormData(
     merged.address = [{ ...prevAddress, ...nextAddress }];
   } else {
     merged.address = base.address;
-  }
-
-  if (partial.nextOfKin) {
-    merged.nextOfKin = { ...base.nextOfKin, ...partial.nextOfKin };
-  } else {
-    merged.nextOfKin = base.nextOfKin;
   }
 
   return merged;
@@ -87,11 +83,17 @@ interface OnboardingState {
    * Confirmation screen reads it straight from here instead of a query.
    */
   finalizeResult: FinalizeApplicationResponse | null;
+  /**
+   * Primary identifier from this session's identifier screen — used only
+   * for the same-tab duplicate-product guard. Never persisted.
+   */
+  primaryIdentifierValue: string | null;
 
   setFromStartResponse: (
     response: StartApplicationResponse,
     productCode: ProductCode,
   ) => void;
+  setPrimaryIdentifierValue: (value: string) => void;
   setCurrentStep: (step: DraftStep) => void;
   patchFormData: (partial: Partial<DraftFormData>) => void;
   setSecurityCheckSubStep: (subStep: SecurityCheckSubStep) => void;
@@ -108,9 +110,11 @@ const INITIAL_STATE = {
   formData: {},
   securityCheckSubStep: null,
   finalizeResult: null,
+  primaryIdentifierValue: null,
 } satisfies Omit<
   OnboardingState,
   | 'setFromStartResponse'
+  | 'setPrimaryIdentifierValue'
   | 'setCurrentStep'
   | 'patchFormData'
   | 'setSecurityCheckSubStep'
@@ -126,34 +130,29 @@ export const useOnboardingStore = create<OnboardingState>()(
       setFromStartResponse: (response, productCode) => {
         const formDataFromResponse = response.formData ?? {};
         const hasFormData = Object.keys(formDataFromResponse).length > 0;
+        const incoming =
+          hasFormData || !response.existingCustomer
+            ? formDataFromResponse
+            : prefillFromExistingCustomer(response.existingCustomer);
 
-        set({
+        set((state) => ({
           productCode,
           draftId: response.draftId,
           currentStep: response.currentStep,
           isExistingCustomer: response.isExistingCustomer,
           requiresSecurityCheck: response.requiresSecurityCheck,
-          formData:
-            hasFormData || !response.existingCustomer
-              ? formDataFromResponse
-              : prefillFromExistingCustomer(response.existingCustomer),
-          // Existing customers land straight on SECURITY_VERIFICATION — make
-          // sure the first sub-modal is queued up rather than left null.
-          // OTP first (phone-possession check), then security questions,
-          // then facial — see SecurityVerificationStep. Also check
-          // currentStep directly, not just requiresSecurityCheck: resuming a
-          // draft that was left mid-verification comes back with
-          // requiresSecurityCheck: false (it's only true on a brand-new
-          // match) but currentStep still "SECURITY_VERIFICATION" — without
-          // this, the screen renders with no sub-step set and no modal ever
-          // opens, leaving the user stuck with nothing to interact with.
+          // Keep fields collected before /start (email, personal info, BVN).
+          formData: mergeFormData(state.formData, incoming),
           securityCheckSubStep:
             response.requiresSecurityCheck ||
             response.currentStep === 'SECURITY_VERIFICATION'
               ? 'OTP'
               : null,
-        });
+        }));
       },
+
+      setPrimaryIdentifierValue: (value) =>
+        set({ primaryIdentifierValue: value }),
 
       setCurrentStep: (step) => set({ currentStep: step }),
 
@@ -179,6 +178,7 @@ export const useOnboardingStore = create<OnboardingState>()(
         formData: state.formData,
         isExistingCustomer: state.isExistingCustomer,
         requiresSecurityCheck: state.requiresSecurityCheck,
+        finalizeResult: state.finalizeResult,
       }),
     },
   ),

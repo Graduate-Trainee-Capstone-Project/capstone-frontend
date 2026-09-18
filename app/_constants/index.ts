@@ -1,17 +1,65 @@
 import type {IdentifierType, ProductCode} from "@/app/_types";
+import type {SubsidiarySlug} from "./subsidiaries";
+
+export {NIGERIAN_STATES} from "./nigerian-states";
+export {FALLBACK_ADDITIONAL_FIELDS, additionalFieldsFor} from "./product-fields";
+export {
+  SUBSIDIARIES,
+  SUBSIDIARY_BY_SLUG,
+  productCodeToSubsidiary,
+  isProductCode,
+  type Subsidiary,
+  type SubsidiarySlug,
+} from "./subsidiaries";
 
 /**
  * Presentation-only copy, keyed by productCode. This is explicitly allowed
  * to be a static map per the build plan — it never changes which fields
  * render or which steps run, it's just display text on the product cards.
  */
-export const PRODUCT_DISPLAY_COPY: Record<ProductCode, {description: string}> = {
-  SAVINGS: {description: "Open a savings account and start earning interest from day one."},
-  CURRENT: {description: "A current account built for everyday transactions and business."},
-  PENSION_RSA: {description: "Register a Retirement Savings Account with Stanbic IBTC Pension Managers."},
-  STOCKBROKING: {description: "Trade and invest in the Nigerian stock market."},
-  INSURANCE: {description: "Protect what matters with a Stanbic IBTC insurance policy."},
+export const PRODUCT_DISPLAY_COPY: Record<
+  ProductCode,
+  {name: string; description: string; benefits: string[]; icon: string}
+> = {
+  SAVINGS: {
+    name: "Savings account",
+    description: "Open a savings account and start earning interest from day one.",
+    benefits: ["Earn interest from day one", "Zero-minimum opening balance", "Instant virtual debit card"],
+    icon: "lucide:piggy-bank",
+  },
+  CURRENT: {
+    name: "Current account",
+    description: "A current account built for everyday transactions and business.",
+    benefits: ["Unlimited everyday transfers", "Optional cheque book", "Built for personal and business use"],
+    icon: "lucide:wallet",
+  },
+  PENSION_RSA: {
+    name: "Retirement Savings Account",
+    description: "Register a Retirement Savings Account with Stanbic IBTC Pension Managers.",
+    benefits: ["Instant RSA PIN generation", "Voluntary contribution tax relief", "Fund I–VI risk structures"],
+    icon: "lucide:shield",
+  },
+  STOCKBROKING: {
+    name: "Stockbroking account",
+    description: "Trade and invest in the Nigerian stock market.",
+    benefits: ["Real-time NGX order matching", "Institutional equity research", "Integrated dividend collection"],
+    icon: "lucide:candlestick-chart",
+  },
+  INSURANCE: {
+    name: "Investment account",
+    description:
+      "Grow your wealth with professionally managed funds from Stanbic IBTC Asset Management.",
+    benefits: ["Diversified fund options", "Professional portfolio management", "Flexible contributions"],
+    icon: "lucide:trending-up",
+  },
 };
+
+export function productDisplayName(productCode: ProductCode | null | undefined, fallback?: string): string {
+  if (productCode && PRODUCT_DISPLAY_COPY[productCode]) {
+    return PRODUCT_DISPLAY_COPY[productCode].name;
+  }
+  return fallback ?? "this product";
+}
 
 /**
  * Drives the generic identifier input on Screen 1 — the field type is
@@ -38,8 +86,9 @@ export const ROUTES = {
   bank: "/bank",
   pensions: "/pensions",
   stockbroking: "/stockbroking",
-  /** Full product grid — kept as a secondary "browse all products" entry point. */
+  /** Subsidiary picker — primary "Open an account" entry point. */
   home: "/apply",
+  applySubsidiary: (slug: SubsidiarySlug) => `/apply/${slug}`,
   apply: (productCode: string) => `/apply/${productCode}`,
 } as const;
 
@@ -59,13 +108,13 @@ const DEFAULT_DOCUMENT_SLOTS: DocumentSlotConfig[] = [
   {
     key: "idDocumentName",
     label: "Government-issued ID",
-    helperText: "A clear photo or scan of your ID, passport, or driver's licence.",
+    helperText: "A clear photo or scan of your ID, passport, or driver's licence (max 10 MB).",
     accept: "image/*,.pdf",
   },
   {
     key: "passportPhotoName",
     label: "Passport photograph",
-    helperText: "A recent, plain-background passport photo.",
+    helperText: "A recent, plain-background passport photo (max 10 MB).",
     accept: "image/*",
   },
 ];
@@ -73,7 +122,7 @@ const DEFAULT_DOCUMENT_SLOTS: DocumentSlotConfig[] = [
 const SIGNATURE_SLOT: DocumentSlotConfig = {
   key: "signatureName",
   label: "Signature",
-  helperText: "A photo or scan of your signature on plain white paper.",
+  helperText: "A photo or scan of your signature on plain white paper (max 10 MB).",
   accept: "image/*",
 };
 

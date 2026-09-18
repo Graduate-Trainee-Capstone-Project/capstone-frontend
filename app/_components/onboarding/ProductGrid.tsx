@@ -8,12 +8,17 @@ import {ProductCard} from "@/app/_components/onboarding/ProductCard";
 import {Skeleton} from "@/app/_ui/Skeleton";
 import {Button} from "@/app/_ui/Button";
 import {ROUTES} from "@/app/_constants";
-import type {Product} from "@/app/_types";
+import type {Product, ProductCode} from "@/app/_types";
 
-export function ProductGrid() {
+interface ProductGridProps {
+  productCodes?: ProductCode[];
+}
+
+export function ProductGrid({productCodes}: ProductGridProps) {
   const router = useRouter();
   const {data, isLoading, isError, refetch, isRefetching} = useProducts();
   const reset = useOnboardingStore((state) => state.reset);
+  const skeletonCount = productCodes?.length ?? 4;
 
   function handleSelect(product: Product) {
     // Starting a fresh product selection should never carry over a stale
@@ -25,9 +30,9 @@ export function ProductGrid() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {Array.from({length: 5}).map((_, index) => (
-          <Skeleton key={index} className="h-40" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {Array.from({length: skeletonCount}).map((_, index) => (
+          <Skeleton key={index} className="h-64" />
         ))}
       </div>
     );
@@ -53,7 +58,11 @@ export function ProductGrid() {
     );
   }
 
-  if (data.length === 0) {
+  const products = productCodes
+    ? data.filter((product) => productCodes.includes(product.productCode))
+    : data;
+
+  if (products.length === 0) {
     return (
       <div className="flex flex-col items-center gap-4 rounded-2xl border border-grey-200 bg-white p-10 text-center">
         <p className="text-sm text-grey-600">No products are available right now.</p>
@@ -74,8 +83,8 @@ export function ProductGrid() {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {data.map((product) => (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      {products.map((product) => (
         <ProductCard key={product.productId} product={product} onSelect={handleSelect} />
       ))}
     </div>

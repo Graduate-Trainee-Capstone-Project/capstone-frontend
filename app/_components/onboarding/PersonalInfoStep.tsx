@@ -1,18 +1,24 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import {useEffect, useRef, useState} from 'react';
+import {useRouter} from 'next/navigation';
 import toast from 'react-hot-toast';
-import { useSaveDraft } from '@/app/_hooks';
-import { useOnboardingStore } from '@/app/_hooks/useOnboardingStore';
-import { Input } from '@/app/_ui/Input';
-import { Select } from '@/app/_ui/Select';
-import { Button } from '@/app/_ui/Button';
-import { debounce } from '@/app/_utils/debounce';
-import { isRequired } from '@/app/_utils/validators';
-import { AUTOSAVE_DEBOUNCE_MS, ROUTES } from '@/app/_constants';
-import type { DraftFormData, DraftStep, SaveDraftRequest } from '@/app/_types';
-import { toDateInputFormat } from '@/app/_utils';
+import {useSaveDraft} from '@/app/_hooks';
+import {useOnboardingStore} from '@/app/_hooks/useOnboardingStore';
+import {Input} from '@/app/_ui/Input';
+import {Select} from '@/app/_ui/Select';
+import {debounce} from '@/app/_utils/debounce';
+import {
+  isRequired,
+  isValidEmail,
+  isValidPhone,
+  normalizePhone,
+} from '@/app/_utils/validators';
+import {previousWizardStep} from '@/app/_utils/wizard';
+import {AUTOSAVE_DEBOUNCE_MS, NIGERIAN_STATES, ROUTES} from '@/app/_constants';
+import type {DraftFormData, DraftStep, SaveDraftRequest} from '@/app/_types';
+import {toDateInputFormat} from '@/app/_utils';
+import {WizardStepActions} from '@/app/_components/onboarding/WizardStepActions';
 
 interface PersonalInfoFormData {
   firstName: string;
@@ -20,19 +26,18 @@ interface PersonalInfoFormData {
   lastName: string;
   dateOfBirth: string;
   gender: string;
-  address: { street: string; city: string; state: string };
-  nextOfKin: { fullName: string; relationship: string; phone: string };
+  email: string;
+  phoneNumber: string;
+  address: {houseNumber: string; street: string; city: string; state: string};
 }
 
 const GENDER_OPTIONS = [
-  { value: 'MALE', label: 'Male' },
-  { value: 'FEMALE', label: 'Female' },
+  {value: 'MALE', label: 'Male'},
+  {value: 'FEMALE', label: 'Female'},
 ];
 
 function buildInitialFormData(cached: DraftFormData): PersonalInfoFormData {
-  // BE's address is AddressInfo[]; the form only ever edits one entry.
   const address = cached.address?.[0] ?? {};
-  const nextOfKin = cached.nextOfKin ?? {};
 
   return {
     firstName: cached.firstName ?? '',
@@ -40,25 +45,17 @@ function buildInitialFormData(cached: DraftFormData): PersonalInfoFormData {
     lastName: cached.lastName ?? '',
     dateOfBirth: cached.dateOfBirth ?? '',
     gender: cached.gender ?? '',
+    email: cached.email ?? '',
+    phoneNumber: cached.phoneNumber ?? '',
     address: {
+      houseNumber: address.houseNumber ?? '',
       street: address.street ?? '',
       city: address.city ?? '',
       state: address.state ?? '',
     },
-    nextOfKin: {
-      fullName: nextOfKin.fullName ?? '',
-      relationship: nextOfKin.relationship ?? '',
-      phone: nextOfKin.phone ?? '',
-    },
   };
 }
 
-/**
- * The Zustand store still holds the GET-shaped, nested DraftFormData (for
- * cross-step prefill/display) — separate from the flat multipart payload BE
- * actually accepts on save. nextOfKin has no BE column at all, so it's
- * dropped here rather than invented as non-standard form fields.
- */
 function toStorePatch(formData: PersonalInfoFormData): Partial<DraftFormData> {
   return {
     firstName: formData.firstName || undefined,
@@ -66,19 +63,21 @@ function toStorePatch(formData: PersonalInfoFormData): Partial<DraftFormData> {
     lastName: formData.lastName || undefined,
     dateOfBirth: formData.dateOfBirth || undefined,
     gender: formData.gender || undefined,
+    email: formData.email || undefined,
+    phoneNumber: formData.phoneNumber ? normalizePhone(formData.phoneNumber) : undefined,
     address: [
       {
+        houseNumber: formData.address.houseNumber,
         street: formData.address.street,
         city: formData.address.city,
         state: formData.address.state,
       },
     ],
-    nextOfKin: formData.nextOfKin,
     nationality: 'Nigerian',
   };
 }
 
-/** BE's actual multipart/form-data SaveDraftRequest — flat, no nested `formData`. */
+/** BE's multipart/form-data SaveDraftRequest — flat, no nested `formData`. */
 function toSavePayload(
   formData: PersonalInfoFormData,
   currentStep: DraftStep,
@@ -91,6 +90,11 @@ function toSavePayload(
     lastName: formData.lastName || undefined,
     dateOfBirth: formData.dateOfBirth || undefined,
     gender: formData.gender || undefined,
+    email: formData.email || undefined,
+    phoneNumber: formData.phoneNumber
+      ? normalizePhone(formData.phoneNumber)
+      : undefined,
+    houseNumber: formData.address.houseNumber || undefined,
     street: formData.address.street || undefined,
     city: formData.address.city || undefined,
     state: formData.address.state || undefined,
@@ -98,50 +102,31 @@ function toSavePayload(
   };
 }
 
-const REQUIRED_FIELDS: Array<keyof PersonalInfoFormData> = [
-  'firstName',
-  'lastName',
-  'dateOfBirth',
-  'gender',
-];
-
 export function PersonalInfoStep() {
   const router = useRouter();
   const draftId = useOnboardingStore((state) => state.draftId);
   const cachedFormData = useOnboardingStore((state) => state.formData);
+  const isExistingCustomer = useOnboardingStore((state) => state.isExistingCustomer);
   const patchFormData = useOnboardingStore((state) => state.patchFormData);
   const setCurrentStep = useOnboardingStore((state) => state.setCurrentStep);
   const resetStore = useOnboardingStore((state) => state.reset);
   const saveDraft = useSaveDraft(draftId ?? '');
+
+  const previousStep = previousWizardStep('PERSONAL_INFO', isExistingCustomer);
 
   const [formData, setFormData] = useState<PersonalInfoFormData>(() =>
     buildInitialFormData(cachedFormData),
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Mirrors `formData` so the debounced autosave closure (built once per
-  // draftId in the effect below) always reads the LATEST values rather than
-  // whatever was current when the closure was created.
   const formDataRef = useRef(formData);
   useEffect(() => {
     formDataRef.current = formData;
   }, [formData]);
 
-  // Set once Continue / Save-and-continue-later has fired its own save —
-  // guards the debounce, not just cancels it once: clicking a submit button
-  // leaves it focused, and React unmounting this form right after a
-  // successful transition fires a FRESH blur on it, re-arming the debounce
-  // AFTER the explicit cancel() below already ran. That stale timer would
-  // otherwise fire ~800ms later with old data and currentStep: "PERSONAL_INFO",
-  // which useSaveDraft's cache merge + ApplyProductClient's reactive
-  // setCurrentStep would use to silently revert the just-completed transition.
   const committedRef = useRef(false);
 
-  // Always sends the FULL current snapshot, never a delta — BE replaces
-  // Address wholesale whenever `street` is present (it isn't merged
-  // per-sub-field), so a partial save would risk dropping previously-saved
-  // city/state.
-  const debouncedAutosaveRef = useRef<(() => void) & { cancel?: () => void }>(
+  const debouncedAutosaveRef = useRef<(() => void) & {cancel?: () => void}>(
     () => {},
   );
   useEffect(() => {
@@ -158,19 +143,16 @@ export function PersonalInfoStep() {
     key: K,
     value: PersonalInfoFormData[K],
   ) {
-    setFormData((prev) => ({ ...prev, [key]: value }));
-    setErrors((prev) => ({ ...prev, [key as string]: '' }));
+    setFormData((prev) => ({...prev, [key]: value}));
+    setErrors((prev) => ({...prev, [key as string]: ''}));
   }
 
-  function updateNested<Group extends 'address' | 'nextOfKin'>(
-    group: Group,
-    field: keyof PersonalInfoFormData[Group],
-    value: string,
-  ) {
+  function updateAddress(field: keyof PersonalInfoFormData['address'], value: string) {
     setFormData((prev) => ({
       ...prev,
-      [group]: { ...prev[group], [field]: value },
+      address: {...prev.address, [field]: value},
     }));
+    setErrors((prev) => ({...prev, [field]: ''}));
   }
 
   function handleBlur() {
@@ -179,55 +161,81 @@ export function PersonalInfoStep() {
 
   function validate(): boolean {
     const nextErrors: Record<string, string> = {};
-    for (const field of REQUIRED_FIELDS) {
+    for (const field of [
+      'firstName',
+      'lastName',
+      'dateOfBirth',
+      'gender',
+    ] as const) {
       const result = isRequired(String(formData[field] ?? ''));
       if (!result.valid)
         nextErrors[field] = result.message ?? 'This field is required.';
     }
+
+    const emailResult = isRequired(formData.email);
+    if (!emailResult.valid) {
+      nextErrors.email = emailResult.message ?? 'This field is required.';
+    } else {
+      const format = isValidEmail(formData.email);
+      if (!format.valid) nextErrors.email = format.message ?? 'Enter a valid email address.';
+    }
+
+    const phoneRequired = isRequired(formData.phoneNumber);
+    if (!phoneRequired.valid) {
+      nextErrors.phoneNumber = phoneRequired.message ?? 'This field is required.';
+    } else {
+      const format = isValidPhone(formData.phoneNumber);
+      if (!format.valid)
+        nextErrors.phoneNumber = format.message ?? 'Enter a valid Nigerian mobile number.';
+    }
+
+    const streetResult = isRequired(formData.address.street);
+    if (!streetResult.valid)
+      nextErrors.street = streetResult.message ?? 'This field is required.';
+
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   }
 
-  function handleSaveAndContinueLater() {
+  function persist(step: DraftStep, onSuccess?: (currentStep: DraftStep) => void) {
     if (!draftId) return;
     committedRef.current = true;
     debouncedAutosaveRef.current.cancel?.();
     patchFormData(toStorePatch(formData));
-    saveDraft.mutate(toSavePayload(formData, 'PERSONAL_INFO'), {
-      onSuccess: () => {
-        toast.success(
-          'Saved — come back anytime with your details to pick up where you left off.',
-        );
-        resetStore();
-        router.push(ROUTES.home);
+    saveDraft.mutate(toSavePayload(formData, step), {
+      onSuccess: (data) => onSuccess?.(data.currentStep),
+      onError: (error) => {
+        committedRef.current = false;
+        toast.error(error.message || "Couldn't save right now. Please try again.");
       },
-      onError: (error) =>
-        toast.error(
-          error.message || "Couldn't save right now. Please try again.",
-        ),
     });
+  }
+
+  function handleSaveAndContinueLater() {
+    persist('PERSONAL_INFO', () => {
+      toast.success(
+        'Saved — come back anytime with your details to pick up where you left off.',
+      );
+      resetStore();
+      router.push(ROUTES.home);
+    });
+  }
+
+  function handleBack() {
+    if (!previousStep) return;
+    persist(previousStep, (step) => setCurrentStep(step));
   }
 
   function handleContinue(event: React.FormEvent) {
     event.preventDefault();
-    if (!draftId) return;
     if (!validate()) return;
-
-    committedRef.current = true;
-    debouncedAutosaveRef.current.cancel?.();
-    patchFormData(toStorePatch(formData));
-    saveDraft.mutate(toSavePayload(formData, 'PRODUCT_SPECIFIC_INFO'), {
-      onSuccess: (data) => setCurrentStep(data.currentStep),
-      onError: (error) =>
-        toast.error(
-          error.message || "Couldn't save right now. Please try again.",
-        ),
-    });
+    persist('PRODUCT_SPECIFIC_INFO', (step) => setCurrentStep(step));
   }
 
   return (
     <form
       onSubmit={handleContinue}
+      method='post'
       className='flex flex-col gap-6'
       onBlur={handleBlur}
     >
@@ -282,73 +290,67 @@ export function PersonalInfoStep() {
           error={errors.gender}
           required
         />
+        <Input
+          label='Email address'
+          name='email'
+          type='email'
+          value={formData.email}
+          onChange={(e) => updateField('email', e.target.value)}
+          error={errors.email}
+          required
+        />
+        <Input
+          label='Phone number'
+          name='phoneNumber'
+          type='tel'
+          inputMode='tel'
+          value={formData.phoneNumber}
+          onChange={(e) => updateField('phoneNumber', e.target.value)}
+          error={errors.phoneNumber}
+          required
+        />
       </div>
 
       <div className='flex flex-col gap-4'>
         <h3 className='text-sm font-semibold text-grey-800'>Address</h3>
-        <div className='grid grid-cols-1 gap-4 sm:grid-cols-3'>
+        <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
+          <Input
+            label='House number'
+            name='houseNumber'
+            value={formData.address.houseNumber}
+            onChange={(e) => updateAddress('houseNumber', e.target.value)}
+          />
           <Input
             label='Street'
             name='street'
             value={formData.address.street}
-            onChange={(e) => updateNested('address', 'street', e.target.value)}
+            onChange={(e) => updateAddress('street', e.target.value)}
+            error={errors.street}
+            required
           />
           <Input
             label='City'
             name='city'
             value={formData.address.city}
-            onChange={(e) => updateNested('address', 'city', e.target.value)}
+            onChange={(e) => updateAddress('city', e.target.value)}
           />
-          <Input
+          <Select
             label='State'
             name='state'
+            options={NIGERIAN_STATES}
+            placeholder='Select state'
             value={formData.address.state}
-            onChange={(e) => updateNested('address', 'state', e.target.value)}
+            onChange={(e) => updateAddress('state', e.target.value)}
           />
         </div>
       </div>
 
-      <div className='flex flex-col gap-4'>
-        <h3 className='text-sm font-semibold text-grey-800'>Next of kin</h3>
-        <div className='grid grid-cols-1 gap-4 sm:grid-cols-3'>
-          <Input
-            label='Full name'
-            name='nextOfKinFullName'
-            value={formData.nextOfKin.fullName}
-            onChange={(e) =>
-              updateNested('nextOfKin', 'fullName', e.target.value)
-            }
-          />
-          <Input
-            label='Relationship'
-            name='nextOfKinRelationship'
-            value={formData.nextOfKin.relationship}
-            onChange={(e) =>
-              updateNested('nextOfKin', 'relationship', e.target.value)
-            }
-          />
-          <Input
-            label='Phone'
-            name='nextOfKinPhone'
-            value={formData.nextOfKin.phone}
-            onChange={(e) => updateNested('nextOfKin', 'phone', e.target.value)}
-          />
-        </div>
-      </div>
-
-      <div className='flex flex-col-reverse gap-3 sm:flex-row sm:justify-between'>
-        <Button
-          type='button'
-          variant='secondary'
-          onClick={handleSaveAndContinueLater}
-          isLoading={saveDraft.isPending}
-        >
-          Save and continue later
-        </Button>
-        <Button type='submit' isLoading={saveDraft.isPending}>
-          Continue
-        </Button>
-      </div>
+      <WizardStepActions
+        onBack={handleBack}
+        hideBack={!previousStep}
+        onSaveLater={handleSaveAndContinueLater}
+        isLoading={saveDraft.isPending}
+      />
     </form>
   );
 }

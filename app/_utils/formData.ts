@@ -1,4 +1,4 @@
-import type {DraftDocument} from "@/app/_types";
+import type {DraftDocument, DraftFormData, DraftStep, SaveDraftRequest} from "@/app/_types";
 import type {DocumentSlotConfig} from "@/app/_constants";
 
 /** Schema field names the product-info UI uses → DraftFormData names the BE persists. */
@@ -16,6 +16,35 @@ export function toBackendProductFormData(
     out[SCHEMA_TO_BACKEND[key] ?? key] = value;
   }
   return out;
+}
+
+/** Flatten Zustand formData into the multipart SaveDraftRequest shape. */
+export function toDraftSavePayload(
+  formData: DraftFormData,
+  extra: Record<string, unknown>,
+  currentStep: DraftStep,
+): SaveDraftRequest {
+  const address = formData.address?.[0] ?? {};
+  return {
+    currentStep,
+    channel: "WEB",
+    firstName: formData.firstName,
+    middleName: formData.middleName,
+    lastName: formData.lastName,
+    dateOfBirth: formData.dateOfBirth,
+    gender: formData.gender,
+    email: formData.email,
+    phoneNumber: formData.phoneNumber,
+    houseNumber: address.houseNumber,
+    street: address.street,
+    city: address.city,
+    state: address.state,
+    country: address.country,
+    preferredBranch: formData.preferredBranch,
+    checkBookRequested: formData.checkBookRequested,
+    nationality: formData.nationality,
+    ...toBackendProductFormData(extra),
+  };
 }
 
 /** Read a schema field from cache, falling back to the BE-mapped name after resume. */

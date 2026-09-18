@@ -6,24 +6,18 @@ import {ApiRequestError, useProduct, useStartApplication} from "@/app/_hooks";
 import {saveDraftAction} from "@/app/_lib/actions";
 import {useOnboardingStore} from "@/app/_hooks/useOnboardingStore";
 import {IdentifierField} from "@/app/_components/onboarding/IdentifierField";
-import {ExistingCustomerBanner} from "@/app/_components/onboarding/ExistingCustomerBanner";
 import {Button} from "@/app/_ui/Button";
 import {Skeleton} from "@/app/_ui/Skeleton";
 import {normalizePhone, validateIdentifier} from "@/app/_utils/validators";
-import type {DraftStep, ExistingCustomerData, IdentifierType, ProductCode, SaveDraftRequest} from "@/app/_types";
+import {hasCompletedProduct} from "@/app/_utils/completedProducts";
+import {rememberBvn} from "@/app/_utils/knownBvn";
+import {productDisplayName} from "@/app/_constants";
+import type {DraftFormData, DraftStep, ExistingCustomerData, IdentifierType, ProductCode, SaveDraftRequest} from "@/app/_types";
 
 interface IdentifierCaptureStepProps {
   productCode: ProductCode;
 }
 
-/**
- * existingCustomer is only ever returned ONCE, at the moment /start first
- * matches a customer for a new product — it's never re-sent on resume. If
- * the user abandons before PersonalInfoStep saves anything, that profile
- * data would otherwise be gone for good on a later resume. Persisting it
- * into the draft immediately (still on SECURITY_VERIFICATION) makes it
- * durable, so a resumed draft's own formData carries it forward instead.
- */
 function toExistingCustomerSavePayload(existing: ExistingCustomerData, currentStep: DraftStep): SaveDraftRequest {
   return {
     currentStep,
@@ -43,6 +37,7 @@ export function IdentifierCaptureStep({productCode}: IdentifierCaptureStepProps)
   const {data: product, isLoading, isError} = useProduct(productCode);
   const startApplication = useStartApplication();
   const setFromStartResponse = useOnboardingStore((state) => state.setFromStartResponse);
+  const setPrimaryIdentifierValue = useOnboardingStore((state) => state.setPrimaryIdentifierValue);
   const patchFormData = useOnboardingStore((state) => state.patchFormData);
 
   const [values, setValues] = useState<Record<string, string>>({});
@@ -64,6 +59,7 @@ export function IdentifierCaptureStep({productCode}: IdentifierCaptureStepProps)
 
   const requiredIdentifiers = product.requiredIdentifiers;
   const [primaryType, secondaryType] = requiredIdentifiers;
+  const productName = productDisplayName(productCode, product.productName);
 
   function handleChange(type: IdentifierType, value: string) {
     setValues((prev) => ({...prev, [type]: value}));
@@ -86,7 +82,18 @@ export function IdentifierCaptureStep({productCode}: IdentifierCaptureStepProps)
     if (Object.keys(nextErrors).length > 0) return;
 
     const primaryIdentifierValue = normalize(primaryType, values[primaryType]);
-    const secondaryIdentifierValue = secondaryType ? normalize(secondaryType, values[secondaryType]) : undefined;
+    const secondaryIdentifierValue = secondaryType
+      ? normalize(secondaryType, values[secondaryType])
+      : undefined;
+
+    if (values.BVN) rememberBvn(values.BVN);
+
+    if (hasCompletedProduct(primaryIdentifierValue, productCode)) {
+      toast.error(`Dear customer, you already have a ${productName} account with us.`);
+      return;
+    }
+
+    setPrimaryIdentifierValue(primaryIdentifierValue);
 
     startApplication.mutate(
       {
@@ -99,16 +106,32 @@ export function IdentifierCaptureStep({productCode}: IdentifierCaptureStepProps)
         onSuccess: (data) => {
           setFromStartResponse(data, productCode);
 
+          const identifierPrefill: Partial<DraftFormData> = {};
+          if (values.EMAIL) identifierPrefill.email = normalize("EMAIL", values.EMAIL);
+          if (values.PHONE) identifierPrefill.phoneNumber = normalize("PHONE", values.PHONE);
+          if (Object.keys(identifierPrefill).length > 0) {
+            patchFormData(identifierPrefill);
+          }
+
           if (data.isResumed) {
             toast.success("Welcome back — resuming your application.");
           } else if (data.isExistingCustomer) {
-            toast("We found an existing profile — a quick verification is needed.");
+            toast.success(
+              `We found your existing Stanbic IBTC profile. We'll use it to fast-track this ${productName} application — a quick verification is next.`,
+            );
           }
 
-          // Fire-and-forget: persist existingCustomer's prefill into the
-          // draft now, while we still have it — see toExistingCustomerSavePayload.
           if (data.existingCustomer) {
-            void saveDraftAction(data.draftId, toExistingCustomerSavePayload(data.existingCustomer, data.currentStep));
+            void saveDraftAction(data.draftId, {
+              ...toExistingCustomerSavePayload(data.existingCustomer, data.currentStep),
+              ...identifierPrefill,
+            });
+          } else if (identifierPrefill.email || identifierPrefill.phoneNumber) {
+            void saveDraftAction(data.draftId, {
+              currentStep: data.currentStep,
+              channel: "WEB",
+              ...identifierPrefill,
+            });
           }
         },
         onError: (error) => {
@@ -126,33 +149,30 @@ export function IdentifierCaptureStep({productCode}: IdentifierCaptureStepProps)
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-      <ExistingCustomerBanner
-        identifierType={primaryType ?? "BVN"}
-        onPrefilled={patchFormData}
-      />
+    <div className="flex flex-col gap-5">
+      <form onSubmit={handleSubmit} method="post" className="flex flex-col gap-5">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-xl font-semibold text-grey-900">{productName}</h2>
+          <p className="text-sm text-grey-600">
+            Tell us a little about yourself so we can check whether you already have a profile with us.
+          </p>
+        </div>
 
-      <div className="flex flex-col gap-1">
-        <h2 className="text-xl font-semibold text-grey-900">{product.productName}</h2>
-        <p className="text-sm text-grey-600">
-          Tell us a little about yourself so we can check whether you already have a profile with us.
-        </p>
-      </div>
+        {requiredIdentifiers.map((type) => (
+          <IdentifierField
+            key={type}
+            type={type}
+            value={values[type] ?? ""}
+            onChange={(value) => handleChange(type, value)}
+            error={errors[type]}
+            disabled={startApplication.isPending}
+          />
+        ))}
 
-      {requiredIdentifiers.map((type) => (
-        <IdentifierField
-          key={type}
-          type={type}
-          value={values[type] ?? ""}
-          onChange={(value) => handleChange(type, value)}
-          error={errors[type]}
-          disabled={startApplication.isPending}
-        />
-      ))}
-
-      <Button type="submit" isLoading={startApplication.isPending} fullWidth>
-        Continue
-      </Button>
-    </form>
+        <Button type="submit" isLoading={startApplication.isPending} fullWidth>
+          Continue
+        </Button>
+      </form>
+    </div>
   );
 }

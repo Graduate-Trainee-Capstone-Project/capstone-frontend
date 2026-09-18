@@ -14,9 +14,10 @@ interface SubsidiaryDetailCardProps {
   href: string;
   ctaLabel: string;
   secondaryLabel: string;
+  secondaryHref?: string;
 }
 
-/** One of the three rich subsidiary cards in the "Specialized Subsidiaries" section. */
+/** One of the rich subsidiary cards in the "Specialized Subsidiaries" section. */
 export function SubsidiaryDetailCard({
   accentClassName,
   iconBgClassName,
@@ -30,6 +31,7 @@ export function SubsidiaryDetailCard({
   href,
   ctaLabel,
   secondaryLabel,
+  secondaryHref,
 }: SubsidiaryDetailCardProps) {
   return (
     <div className="flex flex-1 flex-col justify-between overflow-hidden rounded-2xl bg-white shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-2px_rgba(0,0,0,0.1)]">
@@ -73,7 +75,7 @@ export function SubsidiaryDetailCard({
           <Icon icon="lucide:arrow-right" className="size-4.5" />
         </Link>
         <Link
-          href={href}
+          href={secondaryHref ?? href}
           className="flex items-center gap-1 pt-1 text-[11px] font-semibold tracking-wide text-primary-500 hover:underline"
         >
           {secondaryLabel}

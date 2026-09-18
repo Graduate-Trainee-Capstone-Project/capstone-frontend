@@ -1,66 +1,13 @@
 import {Icon} from "@/app/_ui/Icon";
 import {SubsidiaryDetailCard} from "@/app/_components/marketing/SubsidiaryDetailCard";
-import {ROUTES} from "@/app/_constants";
+import {ROUTES, SUBSIDIARIES} from "@/app/_constants";
 
-const SUBSIDIARIES = [
-  {
-    accentClassName: "bg-primary-500",
-    iconBgClassName: "bg-primary-500/10",
-    icon: "lucide:landmark",
-    badge: "Banking",
-    title: "Stanbic IBTC Bank",
-    description:
-      "Everyday retail banking, high-yield savings, corporate accounts, and instant digital transfers with institutional security.",
-    regulatoryIcon: "lucide:shield-check",
-    regulatoryLabel: "Licensed by CBN | Insured by NDIC",
-    features: [
-      "Zero-minimum balance opening",
-      "Instant virtual debit card provisioning",
-      "Automated competitive savings interest",
-    ],
-    href: ROUTES.bank,
-    ctaLabel: "Open Bank Account",
-    secondaryLabel: "Learn more about commercial services",
-  },
-  {
-    accentClassName: "bg-primary-300",
-    iconBgClassName: "bg-primary-300/10",
-    icon: "lucide:piggy-bank",
-    badge: "Pension",
-    title: "Stanbic IBTC Pension Managers",
-    description:
-      "Nigeria's premier Pension Fund Administrator safeguarding your future with industry-leading RSA returns and multi-fund options.",
-    regulatoryIcon: "lucide:shield-check",
-    regulatoryLabel: "PenCom Registered PFA 001",
-    features: [
-      "Online instant RSA PIN generation",
-      "Voluntary contribution tax relief",
-      "Fund I-VI multi-fund risk structures",
-    ],
-    href: ROUTES.pensions,
-    ctaLabel: "Register for an RSA",
-    secondaryLabel: "Learn more about retirement planning",
-  },
-  {
-    accentClassName: "bg-primary-900",
-    iconBgClassName: "bg-primary-900/10",
-    icon: "lucide:candlestick-chart",
-    badge: "Stockbroking",
-    title: "Stanbic IBTC Stockbrokers",
-    description:
-      "The largest equities trading firm on the Nigerian Exchange (NGX) offering institutional analytics and accessible retail trading portals.",
-    regulatoryIcon: "lucide:shield-check",
-    regulatoryLabel: "Licensed by SEC | NGX Trading Licensee",
-    features: [
-      "Real-time NGX order matching & DMA",
-      "Comprehensive institutional equity research",
-      "Integrated dividend auto-collection",
-    ],
-    href: ROUTES.stockbroking,
-    ctaLabel: "Start Stock Trading",
-    secondaryLabel: "Learn more about capital markets",
-  },
-];
+const MARKETING_CTA: Record<string, string> = {
+  bank: "Open Bank Account",
+  pension: "Register for an RSA",
+  stockbroking: "Start Stock Trading",
+  investment: "Open Investment Account",
+};
 
 export function SubsidiariesSection() {
   return (
@@ -77,14 +24,28 @@ export function SubsidiariesSection() {
             Specialized Subsidiaries. One Unified Relationship.
           </h2>
           <p className="text-sm text-grey-600">
-            Connect your accounts across consumer banking, statutory pension accumulation, and stock brokerage
-            without fragmented identity credentials.
+            Connect your accounts across banking, pension, stockbroking, and investment without fragmented
+            identity credentials.
           </p>
         </div>
 
-        <div className="grid w-full grid-cols-1 gap-8 lg:grid-cols-3">
+        <div className="grid w-full grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-4">
           {SUBSIDIARIES.map((subsidiary) => (
-            <SubsidiaryDetailCard key={subsidiary.title} {...subsidiary} />
+            <SubsidiaryDetailCard
+              key={subsidiary.slug}
+              accentClassName={subsidiary.accentClassName}
+              iconBgClassName={subsidiary.iconBgClassName}
+              icon={subsidiary.icon}
+              badge={subsidiary.badge}
+              title={subsidiary.legalName}
+              description={subsidiary.description}
+              regulatoryIcon="lucide:shield-check"
+              regulatoryLabel={subsidiary.regulatoryLabel}
+              features={subsidiary.features}
+              href={subsidiary.marketingHref ?? ROUTES.applySubsidiary(subsidiary.slug)}
+              ctaLabel={MARKETING_CTA[subsidiary.slug] ?? subsidiary.ctaLabel}
+              secondaryLabel={subsidiary.secondaryLabel}
+            />
           ))}
         </div>
       </div>

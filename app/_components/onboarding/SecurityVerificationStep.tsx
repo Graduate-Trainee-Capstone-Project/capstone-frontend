@@ -5,14 +5,11 @@ import {useSaveDraft} from "@/app/_hooks";
 import {useOnboardingStore} from "@/app/_hooks/useOnboardingStore";
 import {Modal} from "@/app/_ui/Modal";
 import {OtpVerificationModal} from "@/app/_components/onboarding/OtpVerificationModal";
-import {SecurityQuestionModal} from "@/app/_components/onboarding/SecurityQuestionModal";
 import {FacialCaptureModal} from "@/app/_components/onboarding/FacialCaptureModal";
 
 /**
- * Existing customers only — fires whenever requiresSecurityCheck came back
- * true from /start, never based on productCode. Three sub-modals, in order
- * (OTP → security questions → facial), must all PASS before we advance past
- * this screen.
+ * Existing customers only — OTP then facial. Security questions are not
+ * part of this flow.
  */
 export function SecurityVerificationStep() {
   const draftId = useOnboardingStore((state) => state.draftId);
@@ -40,11 +37,6 @@ export function SecurityVerificationStep() {
 
   function handleFacialPassed() {
     setSecurityCheckSubStep(null);
-    // PERSONAL_INFO, not PRODUCT_SPECIFIC_INFO — existing customers still
-    // need to land on the (prefilled) KYC form so their existing data
-    // actually gets reviewed and saved to this draft. Skipping straight to
-    // product info meant existingCustomer's prefill sat in the local store
-    // only and was never persisted.
     saveDraft.mutate(
       {currentStep: "PERSONAL_INFO", channel: "WEB"},
       {onSuccess: (data) => setCurrentStep(data.currentStep)},
@@ -59,15 +51,7 @@ export function SecurityVerificationStep() {
       </div>
 
       <Modal isOpen={securityCheckSubStep === "OTP"} title="Enter one-time code" dismissible={false}>
-        <OtpVerificationModal onPassed={() => setSecurityCheckSubStep("SECURITY_QUESTION")} />
-      </Modal>
-
-      <Modal isOpen={securityCheckSubStep === "SECURITY_QUESTION"} title="Security questions" dismissible={false}>
-        <SecurityQuestionModal
-          draftId={draftId}
-          onPassed={() => setSecurityCheckSubStep("FACIAL_RECOGNITION")}
-          onExhausted={() => setIsExhausted(true)}
-        />
+        <OtpVerificationModal onPassed={() => setSecurityCheckSubStep("FACIAL_RECOGNITION")} />
       </Modal>
 
       <Modal isOpen={securityCheckSubStep === "FACIAL_RECOGNITION"} title="Face verification" dismissible={false}>

@@ -12,41 +12,33 @@ import {DocumentUploadStep} from "@/app/_components/onboarding/DocumentUploadSte
 import {ReviewStep} from "@/app/_components/onboarding/ReviewStep";
 import {ConfirmationStep} from "@/app/_components/onboarding/ConfirmationStep";
 import {Skeleton} from "@/app/_ui/Skeleton";
+import {ALREADY_COMPLETED_MESSAGE, isAlreadyCompletedMessage} from "@/app/_utils/applicationCopy";
+import {WizardProgress} from "@/app/_components/onboarding/WizardProgress";
 import type {ProductCode} from "@/app/_types";
 
 interface ApplyProductClientProps {
   productCode: ProductCode;
 }
 
-/**
- * Pure switch on state — no business logic lives here. Same URL, reloaded
- * on a different device (or the same tab), re-derives everything: if a
- * cached draftId for this exact product exists, resync from the server via
- * GET /applications/{draftId}; otherwise fall back to identifier capture,
- * which re-triggers the identifier-based resume/existing-customer flow.
- */
 export function ApplyProductClient({productCode}: ApplyProductClientProps) {
   const storedProductCode = useOnboardingStore((state) => state.productCode);
   const draftId = useOnboardingStore((state) => state.draftId);
   const currentStep = useOnboardingStore((state) => state.currentStep);
+  const finalizeResult = useOnboardingStore((state) => state.finalizeResult);
   const setCurrentStep = useOnboardingStore((state) => state.setCurrentStep);
   const patchFormData = useOnboardingStore((state) => state.patchFormData);
   const securityCheckSubStep = useOnboardingStore((state) => state.securityCheckSubStep);
   const setSecurityCheckSubStep = useOnboardingStore((state) => state.setSecurityCheckSubStep);
   const reset = useOnboardingStore((state) => state.reset);
 
-  const hasMatchingCachedDraft = Boolean(draftId) && storedProductCode === productCode;
+  const alreadyFinished = currentStep === "SUBMITTED" || Boolean(finalizeResult);
+  const hasMatchingCachedDraft = Boolean(draftId) && storedProductCode === productCode && !alreadyFinished;
   const applicationQuery = useApplication(hasMatchingCachedDraft ? (draftId as string) : undefined);
 
   useEffect(() => {
     if (!applicationQuery.data) return;
     setCurrentStep(applicationQuery.data.currentStep);
     patchFormData(applicationQuery.data.formData);
-    // securityCheckSubStep isn't persisted (it's UI-only), so a page reload
-    // that resumes straight into a draft already sitting at
-    // SECURITY_VERIFICATION would otherwise land with no sub-step set and
-    // no modal ever opening. Only set it when null, so this never stomps a
-    // sub-step the user is actively progressing through on a data refetch.
     if (applicationQuery.data.currentStep === "SECURITY_VERIFICATION" && !securityCheckSubStep) {
       setSecurityCheckSubStep("OTP");
     }
@@ -55,52 +47,56 @@ export function ApplyProductClient({productCode}: ApplyProductClientProps) {
 
   useEffect(() => {
     if (!applicationQuery.error) return;
-    if (applicationQuery.error instanceof ApiRequestError) {
-      const message = applicationQuery.error.message;
-      if (
-        applicationQuery.error.code === "DRAFT_ALREADY_SUBMITTED" ||
-        /already submitted|not in progress/i.test(message)
-      ) {
-        toast("This application was already submitted.");
-      }
+
+    const message =
+      applicationQuery.error instanceof ApiRequestError ? applicationQuery.error.message : "";
+    const alreadyCompleted =
+      applicationQuery.error instanceof ApiRequestError &&
+      (applicationQuery.error.code === "DRAFT_ALREADY_SUBMITTED" ||
+        isAlreadyCompletedMessage(message));
+
+    if (finalizeResult || currentStep === "SUBMITTED") {
+      setCurrentStep("SUBMITTED");
+      return;
+    }
+
+    if (alreadyCompleted) {
+      toast(ALREADY_COMPLETED_MESSAGE);
     }
     reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [applicationQuery.error]);
 
-  if (hasMatchingCachedDraft && applicationQuery.isLoading) {
-    return (
+  let body;
+
+  if (alreadyFinished) {
+    body = <ConfirmationStep />;
+  } else if (hasMatchingCachedDraft && applicationQuery.isLoading) {
+    body = (
       <div className="flex flex-col gap-4">
         <Skeleton className="h-11 w-full" />
         <Skeleton className="h-11 w-full" />
         <Skeleton className="h-32 w-full" />
       </div>
     );
+  } else if (currentStep === "SECURITY_VERIFICATION") {
+    body = <SecurityVerificationStep />;
+  } else if (currentStep === "PERSONAL_INFO") {
+    body = <PersonalInfoStep />;
+  } else if (currentStep === "PRODUCT_SPECIFIC_INFO") {
+    body = <ProductSpecificInfoStep />;
+  } else if (currentStep === "DOCUMENT_UPLOAD") {
+    body = <DocumentUploadStep />;
+  } else if (currentStep === "REVIEW") {
+    body = <ReviewStep />;
+  } else {
+    body = <IdentifierCaptureStep productCode={productCode} />;
   }
 
-  if (currentStep === "SECURITY_VERIFICATION") {
-    return <SecurityVerificationStep />;
-  }
-
-  if (currentStep === "PERSONAL_INFO") {
-    return <PersonalInfoStep />;
-  }
-
-  if (currentStep === "PRODUCT_SPECIFIC_INFO") {
-    return <ProductSpecificInfoStep />;
-  }
-
-  if (currentStep === "DOCUMENT_UPLOAD") {
-    return <DocumentUploadStep />;
-  }
-
-  if (currentStep === "REVIEW") {
-    return <ReviewStep />;
-  }
-
-  if (currentStep === "SUBMITTED") {
-    return <ConfirmationStep />;
-  }
-
-  return <IdentifierCaptureStep productCode={productCode} />;
+  return (
+    <div className="flex flex-col gap-8">
+      <WizardProgress />
+      {body}
+    </div>
+  );
 }
