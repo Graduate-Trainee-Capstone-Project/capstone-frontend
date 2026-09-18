@@ -29,7 +29,7 @@ export function OtpVerificationModal({ onPassed }: OtpVerificationModalProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <form onSubmit={handleSubmit} method="post" className="flex flex-col gap-4">
       <p className="text-sm text-grey-600">
         We&apos;ve sent a 6-digit code to your registered phone number. Enter it below to continue.
       </p>

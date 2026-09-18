@@ -65,19 +65,14 @@ export const mockProducts: Product[] = [
     productName: "Current account",
     requiredIdentifiers: ["BVN"],
     additionalFieldsSchema: [
-      {
-        field: "chequeBookRequested",
-        label: "Request a cheque book",
-        type: "checkbox",
-        required: false,
-      },
+      {field: "chequeBookRequested", label: "Request a cheque book", type: "checkbox", required: false},
     ],
   },
   {
     productId: "prod-pension",
     productCode: "PENSION_RSA",
     productName: "Pension (RSA)",
-    requiredIdentifiers: ["NIN", "PHONE"],
+    requiredIdentifiers: ["BVN", "NIN"],
     additionalFieldsSchema: [
       {
         field: "title",
@@ -118,8 +113,14 @@ export const mockProducts: Product[] = [
     productId: "prod-stockbroking",
     productCode: "STOCKBROKING",
     productName: "Stockbroking",
-    requiredIdentifiers: ["BVN"],
+    requiredIdentifiers: ["EMAIL"],
     additionalFieldsSchema: [
+      {
+        field: "bvn",
+        label: "Bank Verification Number (BVN)",
+        type: "text",
+        required: true,
+      },
       {
         field: "bankAccountOption",
         label: "Settlement bank account",
@@ -140,9 +141,15 @@ export const mockProducts: Product[] = [
     productId: "prod-insurance",
     productCode: "INSURANCE",
     productName: "Insurance",
-    requiredIdentifiers: ["EMAIL", "PHONE"],
+    requiredIdentifiers: ["BVN", "PHONE"],
     additionalFieldsSchema: [
-      {field: "policyType", label: "Policy type", type: "text", required: false},
+      {
+        field: "policyType",
+        label: "Policy type",
+        type: "select",
+        options: ["Life", "Motor", "Home", "Travel"],
+        required: true,
+      },
     ],
   },
 ];
@@ -172,7 +179,9 @@ mockIdentifierIndex.set("BVN:12345678901", {
     gender: "FEMALE",
     nationality: "Nigerian",
     address: [{street: "12 Marina Rd", city: "Lagos", state: "Lagos"}],
-    nextOfKin: {fullName: "Chidi Okonkwo", relationship: "Sibling", phone: "+2348012345678"},
+    email: "adaeze.okonkwo@example.com",
+    phoneNumber: "+2348012345678",
+    bvn: "12345678901",
   },
 });
 mockIdentifierIndex.set("NIN:98765432109", {
@@ -236,9 +245,7 @@ export function getSecurityCheckAttempts(draftId: string): Record<SecurityCheckT
 function toSingleAddressString(address?: AddressInfo[] | null): string | null {
   const first = address?.[0];
   if (!first) return null;
-  const parts = [first.houseNumber, first.street, first.city, first.state, first.country].filter(
-    Boolean,
-  );
+  const parts = [first.houseNumber, first.street, first.city, first.state, first.country].filter(Boolean);
   return parts.length > 0 ? parts.join(", ") : null;
 }
 

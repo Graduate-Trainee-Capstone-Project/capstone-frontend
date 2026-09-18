@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import {useState} from "react";
 import toast from "react-hot-toast";
-import { useLookupCustomer } from "@/app/_hooks";
-import { Modal } from "@/app/_ui/Modal";
-import { Input } from "@/app/_ui/Input";
-import { Checkbox } from "@/app/_ui/Checkbox";
-import { Button } from "@/app/_ui/Button";
-import { IDENTIFIER_META } from "@/app/_constants";
-import { normalizePhone, validateIdentifier } from "@/app/_utils/validators";
-import type { IdentifierType } from "@/app/_types";
+import {useLookupCustomer} from "@/app/_hooks";
+import {Modal} from "@/app/_ui/Modal";
+import {Input} from "@/app/_ui/Input";
+import {Checkbox} from "@/app/_ui/Checkbox";
+import {Button} from "@/app/_ui/Button";
+import {IDENTIFIER_META} from "@/app/_constants";
+import {normalizePhone, validateIdentifier} from "@/app/_utils/validators";
+import {rememberBvn} from "@/app/_utils/knownBvn";
+import type {IdentifierType} from "@/app/_types";
 
 interface CrossProductLookupModalProps {
   isOpen: boolean;
@@ -81,18 +82,27 @@ export function CrossProductLookupModal({
       identifierType === "PHONE" ? normalizePhone(identifierValue) : identifierValue.trim();
 
     lookupCustomer.mutate(
-      { identifierType, identifierValue: value },
+      {identifierType, identifierValue: value},
       {
         onSuccess: (data) => {
+          if (identifierType === "BVN") rememberBvn(value);
+          const profileBvn =
+            data.formData && typeof data.formData.bvn === "string" ? data.formData.bvn : "";
+          if (profileBvn) rememberBvn(profileBvn);
           if (data.matched && data.formData) {
-            onPrefilled(data.formData);
+            onPrefilled({...data.formData, ...(profileBvn ? {bvn: profileBvn} : {})});
             toast.success("Found your profile — we've prefilled what we can.");
           } else {
             toast("No existing profile found for that identifier. Continue below as normal.");
           }
           resetAndClose();
         },
-        onError: (error) => setOtpError(error.message || "Couldn't look up that profile. Please try again."),
+        onError: (error) => {
+          setOtpError(error.message || "Couldn't look up that profile. Please try again.");
+          toast.error(
+            "We couldn't retrieve an existing profile. Continue below with your identifiers — that's the path that finds your KYC.",
+          );
+        },
       },
     );
   }
@@ -100,7 +110,7 @@ export function CrossProductLookupModal({
   return (
     <Modal isOpen={isOpen} onClose={resetAndClose} title={`Verify with your ${identifierType}`}>
       {stage === "IDENTIFIER" ? (
-        <form onSubmit={handleRequestOtp} className="flex flex-col gap-4">
+        <form onSubmit={handleRequestOtp} method="post" className="flex flex-col gap-4">
           <p className="text-sm text-grey-600">
             If you already have an account with any Stanbic IBTC business — Bank, Pension, or Stockbroking — we
             can fetch your details and speed things up.
@@ -123,7 +133,7 @@ export function CrossProductLookupModal({
           </Button>
         </form>
       ) : (
-        <form onSubmit={handleVerifyOtp} className="flex flex-col gap-4">
+        <form onSubmit={handleVerifyOtp} method="post" className="flex flex-col gap-4">
           <p className="text-sm text-grey-600">Enter the 6-digit one-time code to continue.</p>
           <Input
             label="One-time code"

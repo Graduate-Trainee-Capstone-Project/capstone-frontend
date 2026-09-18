@@ -1,5 +1,8 @@
 import type {IdentifierType, ProductCode} from "@/app/_types";
 
+export {NIGERIAN_STATES} from "./nigerian-states";
+export {FALLBACK_ADDITIONAL_FIELDS, additionalFieldsFor} from "./product-fields";
+
 /**
  * Presentation-only copy, keyed by productCode. This is explicitly allowed
  * to be a static map per the build plan — it never changes which fields
@@ -8,9 +11,7 @@ import type {IdentifierType, ProductCode} from "@/app/_types";
 export const PRODUCT_DISPLAY_COPY: Record<ProductCode, {description: string}> = {
   SAVINGS: {description: "Open a savings account and start earning interest from day one."},
   CURRENT: {description: "A current account built for everyday transactions and business."},
-  PENSION_RSA: {
-    description: "Register a Retirement Savings Account with Stanbic IBTC Pension Managers.",
-  },
+  PENSION_RSA: {description: "Register a Retirement Savings Account with Stanbic IBTC Pension Managers."},
   STOCKBROKING: {description: "Trade and invest in the Nigerian stock market."},
   INSURANCE: {description: "Protect what matters with a Stanbic IBTC insurance policy."},
 };
@@ -21,25 +22,10 @@ export const PRODUCT_DISPLAY_COPY: Record<ProductCode, {description: string}> = 
  */
 export const IDENTIFIER_META: Record<
   IdentifierType,
-  {
-    label: string;
-    placeholder: string;
-    inputMode: "numeric" | "email" | "tel" | "text";
-    maxLength?: number;
-  }
+  {label: string; placeholder: string; inputMode: "numeric" | "email" | "tel" | "text"; maxLength?: number}
 > = {
-  BVN: {
-    label: "Bank Verification Number (BVN)",
-    placeholder: "e.g. 12345678901",
-    inputMode: "numeric",
-    maxLength: 11,
-  },
-  NIN: {
-    label: "National Identification Number (NIN)",
-    placeholder: "e.g. 98765432109",
-    inputMode: "numeric",
-    maxLength: 11,
-  },
+  BVN: {label: "Bank Verification Number (BVN)", placeholder: "e.g. 12345678901", inputMode: "numeric", maxLength: 11},
+  NIN: {label: "National Identification Number (NIN)", placeholder: "e.g. 98765432109", inputMode: "numeric", maxLength: 11},
   EMAIL: {label: "Email address", placeholder: "e.g. adaeze@example.com", inputMode: "email"},
   PHONE: {label: "Mobile number", placeholder: "e.g. 08012345678", inputMode: "tel"},
 };
@@ -76,13 +62,13 @@ const DEFAULT_DOCUMENT_SLOTS: DocumentSlotConfig[] = [
   {
     key: "idDocumentName",
     label: "Government-issued ID",
-    helperText: "A clear photo or scan of your ID, passport, or driver's licence.",
+    helperText: "A clear photo or scan of your ID, passport, or driver's licence (max 10 MB).",
     accept: "image/*,.pdf",
   },
   {
     key: "passportPhotoName",
     label: "Passport photograph",
-    helperText: "A recent, plain-background passport photo.",
+    helperText: "A recent, plain-background passport photo (max 10 MB).",
     accept: "image/*",
   },
 ];
@@ -90,7 +76,7 @@ const DEFAULT_DOCUMENT_SLOTS: DocumentSlotConfig[] = [
 const SIGNATURE_SLOT: DocumentSlotConfig = {
   key: "signatureName",
   label: "Signature",
-  helperText: "A photo or scan of your signature on plain white paper.",
+  helperText: "A photo or scan of your signature on plain white paper (max 10 MB).",
   accept: "image/*",
 };
 

@@ -69,8 +69,7 @@ export interface Product {
 // StartApplicationResponse.formData / ApplicationDraftResponse.formData).
 // Known BE-typed fields only, per DraftFormData DTO. The index signature
 // keeps room for product-schema fields (employerName, contributionScheme,
-// bankAccountOption, ...) and nextOfKin that FE still collects locally but
-// BE does not yet persist — see docs/justin-backend-alignment-briefing.md B4. ───
+// bankAccountOption, ...). ───
 
 export interface AddressInfo {
   houseNumber?: string;
@@ -78,12 +77,6 @@ export interface AddressInfo {
   city?: string;
   state?: string;
   country?: string;
-}
-
-export interface NextOfKinInfo {
-  fullName?: string;
-  relationship?: string;
-  phone?: string;
 }
 
 export interface DraftFormData {
@@ -102,8 +95,6 @@ export interface DraftFormData {
   checkBookRequested?: boolean;
   documents?: DraftDocument[];
   nationality?: string;
-  /** FE-only — BE has no NOK field yet; sent but ignored until BE adds it. */
-  nextOfKin?: NextOfKinInfo;
   /** FE-only product-schema extras (title, employerName, ...) — BE ignores unknown keys. */
   [key: string]: unknown;
 }

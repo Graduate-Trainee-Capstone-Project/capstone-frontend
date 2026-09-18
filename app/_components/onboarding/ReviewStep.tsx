@@ -1,15 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import {useState} from "react";
 import toast from "react-hot-toast";
-import { useFinalizeApplication, useProduct } from "@/app/_hooks";
-import { useOnboardingStore } from "@/app/_hooks/useOnboardingStore";
-import { Button } from "@/app/_ui/Button";
-import { Checkbox } from "@/app/_ui/Checkbox";
-import { Skeleton } from "@/app/_ui/Skeleton";
-import { PRODUCT_DOCUMENT_SLOTS } from "@/app/_constants";
-import { readSchemaField } from "@/app/_utils/formData";
-import type { DraftDocument } from "@/app/_types";
+import {useFinalizeApplication, useProduct, useSaveDraft} from "@/app/_hooks";
+import {useOnboardingStore} from "@/app/_hooks/useOnboardingStore";
+import {Checkbox} from "@/app/_ui/Checkbox";
+import {Skeleton} from "@/app/_ui/Skeleton";
+import {PRODUCT_DOCUMENT_SLOTS, additionalFieldsFor} from "@/app/_constants";
+import {readSchemaField} from "@/app/_utils/formData";
+import {previousWizardStep} from "@/app/_utils/wizard";
+import {recordCompletedProduct} from "@/app/_utils/completedProducts";
+import {ALREADY_COMPLETED_MESSAGE, isAlreadyCompletedMessage} from "@/app/_utils/applicationCopy";
+import {WizardStepActions} from "@/app/_components/onboarding/WizardStepActions";
+import type {DraftDocument} from "@/app/_types";
 
 interface SummaryRow {
   label: string;
@@ -22,16 +25,18 @@ const PERSONAL_LABELS: Record<string, string> = {
   lastName: "Last name",
   dateOfBirth: "Date of birth",
   gender: "Gender",
+  email: "Email address",
+  phoneNumber: "Phone number",
   nationality: "Nationality",
 };
 
 function rowsFrom(record: Record<string, string>, formData: Record<string, unknown>): SummaryRow[] {
   return Object.entries(record)
-    .map(([key, label]) => ({ label, value: String(formData[key] ?? "").trim() }))
+    .map(([key, label]) => ({label, value: String(formData[key] ?? "").trim()}))
     .filter((row) => row.value.length > 0);
 }
 
-function SummaryList({ title, rows }: { title: string; rows: SummaryRow[] }) {
+function SummaryList({title, rows}: {title: string; rows: SummaryRow[]}) {
   if (rows.length === 0) return null;
   return (
     <div className="flex flex-col gap-2">
@@ -58,11 +63,13 @@ export function ReviewStep() {
   const draftId = useOnboardingStore((state) => state.draftId);
   const isExistingCustomer = useOnboardingStore((state) => state.isExistingCustomer);
   const formData = useOnboardingStore((state) => state.formData);
+  const primaryIdentifierValue = useOnboardingStore((state) => state.primaryIdentifierValue);
   const setCurrentStep = useOnboardingStore((state) => state.setCurrentStep);
   const setFinalizeResult = useOnboardingStore((state) => state.setFinalizeResult);
 
-  const { data: product, isLoading } = useProduct(productCode ?? undefined);
+  const {data: product, isLoading} = useProduct(productCode ?? undefined);
   const finalizeApplication = useFinalizeApplication(draftId ?? "");
+  const saveDraft = useSaveDraft(draftId ?? "");
 
   const [consented, setConsented] = useState(false);
   const [consentError, setConsentError] = useState("");
@@ -73,31 +80,27 @@ export function ReviewStep() {
 
   const personalRows = rowsFrom(PERSONAL_LABELS, formData);
   const addressRows = rowsFrom(
-    { street: "Street", city: "City", state: "State" },
+    {houseNumber: "House number", street: "Street", city: "City", state: "State"},
     (formData.address?.[0] as unknown as Record<string, unknown>) ?? {},
   );
-  const nextOfKinRows = rowsFrom(
-    { fullName: "Full name", relationship: "Relationship", phone: "Phone" },
-    (formData.nextOfKin as Record<string, unknown>) ?? {},
-  );
-  const productRows: SummaryRow[] = (product?.additionalFieldsSchema ?? [])
+  const productRows: SummaryRow[] = additionalFieldsFor(product)
     .map((field) => {
       const raw = readSchemaField(formData, field.field);
       if (raw === undefined || raw === null || raw === "") return null;
       const value = typeof raw === "boolean" ? (raw ? "Yes" : "No") : String(raw);
-      return { label: field.label, value };
+      return {label: field.label, value};
     })
     .filter((row): row is SummaryRow => row !== null);
   const documents = Array.isArray(formData.documents) ? (formData.documents as DraftDocument[]) : [];
   const documentRows: SummaryRow[] =
     documents.length > 0
       ? documents
-        .filter((doc) => doc.type && doc.url)
-        .map((doc) => ({ label: String(doc.type), value: String(doc.url) }))
+          .filter((doc) => doc.type && doc.url)
+          .map((doc) => ({label: String(doc.type), value: String(doc.url)}))
       : rowsFrom(
-        Object.fromEntries((productCode ? PRODUCT_DOCUMENT_SLOTS[productCode] : []).map((slot) => [slot.key, slot.label])),
-        formData,
-      );
+          Object.fromEntries((productCode ? PRODUCT_DOCUMENT_SLOTS[productCode] : []).map((slot) => [slot.key, slot.label])),
+          formData,
+        );
 
   const consentCopy = isExistingCustomer
     ? "I consent to Stanbic IBTC using my verified details for this application and reusing my previously verified KYC information."
@@ -112,15 +115,27 @@ export function ReviewStep() {
 
     finalizeApplication.mutate(undefined, {
       onSuccess: (data) => {
+        if (productCode) {
+          if (primaryIdentifierValue) recordCompletedProduct(primaryIdentifierValue, productCode);
+          const bvn = typeof formData.bvn === "string" ? formData.bvn : "";
+          if (bvn) recordCompletedProduct(bvn, productCode);
+        }
         setFinalizeResult(data);
         setCurrentStep("SUBMITTED");
       },
-      onError: (error) => toast.error(error.message || "Couldn't submit your application. Please try again."),
+      onError: (error) => {
+        if (isAlreadyCompletedMessage(error.message)) {
+          toast(ALREADY_COMPLETED_MESSAGE);
+          setCurrentStep("SUBMITTED");
+          return;
+        }
+        toast.error(error.message || "Couldn't submit your application. Please try again.");
+      },
     });
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+    <form onSubmit={handleSubmit} method="post" className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
         <h2 className="text-xl font-semibold text-grey-900">Review your application</h2>
         <p className="text-sm text-grey-600">
@@ -137,7 +152,6 @@ export function ReviewStep() {
         <div className="flex flex-col gap-5">
           <SummaryList title="Personal information" rows={personalRows} />
           <SummaryList title="Address" rows={addressRows} />
-          <SummaryList title="Next of kin" rows={nextOfKinRows} />
           <SummaryList title="Product details" rows={productRows} />
           <SummaryList title="Documents" rows={documentRows} />
         </div>
@@ -155,11 +169,22 @@ export function ReviewStep() {
         />
       </div>
 
-      <div className="flex justify-end">
-        <Button type="submit" isLoading={finalizeApplication.isPending}>
-          Submit application
-        </Button>
-      </div>
+      <WizardStepActions
+        onBack={() => {
+          const previous = previousWizardStep("REVIEW", isExistingCustomer);
+          if (!previous || !draftId) return;
+          saveDraft.mutate(
+            {currentStep: previous, channel: "WEB"},
+            {
+              onSuccess: (data) => setCurrentStep(data.currentStep),
+              onError: (error) =>
+                toast.error(error.message || "Couldn't go back right now. Please try again."),
+            },
+          );
+        }}
+        continueLabel="Submit application"
+        isLoading={finalizeApplication.isPending || saveDraft.isPending}
+      />
     </form>
   );
 }

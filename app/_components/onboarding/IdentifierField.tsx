@@ -10,6 +10,9 @@ interface IdentifierFieldProps {
   onChange: (value: string) => void;
   error?: string;
   disabled?: boolean;
+  required?: boolean;
+  helperText?: string;
+  name?: string;
 }
 
 /**
@@ -17,12 +20,21 @@ interface IdentifierFieldProps {
  * lets Screen 1 render one input for Savings (BVN) and two for Pension
  * (NIN + PHONE) without a single per-identifier-type component.
  */
-export function IdentifierField({type, value, onChange, error, disabled}: IdentifierFieldProps) {
+export function IdentifierField({
+  type,
+  value,
+  onChange,
+  error,
+  disabled,
+  required,
+  helperText,
+  name,
+}: IdentifierFieldProps) {
   const meta = IDENTIFIER_META[type];
 
   return (
     <Input
-      name={`identifier-${type}`}
+      name={name ?? `identifier-${type}`}
       label={meta.label}
       placeholder={meta.placeholder}
       inputMode={meta.inputMode === "email" ? "email" : meta.inputMode === "tel" ? "tel" : meta.inputMode}
@@ -30,7 +42,9 @@ export function IdentifierField({type, value, onChange, error, disabled}: Identi
       value={value}
       onChange={(event) => onChange(event.target.value)}
       error={error}
+      helperText={helperText}
       disabled={disabled}
+      required={required}
       autoComplete="off"
     />
   );

@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import {create} from "zustand";
-import {persist} from "zustand/middleware";
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type {
   DraftFormData,
   DraftStep,
@@ -9,7 +9,7 @@ import type {
   FinalizeApplicationResponse,
   ProductCode,
   StartApplicationResponse,
-} from "@/app/_types";
+} from '@/app/_types';
 
 /**
  * New existing-customer starts come back with empty formData and the profile
@@ -17,7 +17,9 @@ import type {
  * reads from. `address` is a single street string on existingCustomer (not
  * our {street, city, state} shape), so it lands in address[0].street only.
  */
-function prefillFromExistingCustomer(existing: ExistingCustomerData): Partial<DraftFormData> {
+function prefillFromExistingCustomer(
+  existing: ExistingCustomerData,
+): Partial<DraftFormData> {
   const prefill: Partial<DraftFormData> = {
     firstName: existing.firstName,
     lastName: existing.lastName,
@@ -27,38 +29,42 @@ function prefillFromExistingCustomer(existing: ExistingCustomerData): Partial<Dr
   if (existing.gender) prefill.gender = existing.gender;
   if (existing.phoneNumber) prefill.phoneNumber = existing.phoneNumber;
   if (existing.email) prefill.email = existing.email;
-  if (existing.address) prefill.address = [{street: existing.address, city: "", state: ""}];
+  if (existing.address)
+    prefill.address = [
+      { houseNumber: '', street: existing.address, city: '', state: '' },
+    ];
   return prefill;
 }
 
 /**
- * Shallow-merges top-level formData keys, but deep-merges the nested groups
- * (address, nextOfKin) instead of overwriting them wholesale — autosave only
- * ever sends the fields changed since the last save, so a plain shallow
- * merge would drop previously-saved sibling fields (e.g. saving a new
- * `street` alone would blank out `city`/`state` in the store).
+ * Shallow-merges top-level formData keys, but deep-merges address instead
+ * of overwriting it wholesale — autosave only ever sends the fields
+ * changed since the last save, so a plain shallow merge would drop
+ * previously-saved sibling fields (e.g. saving a new `street` alone
+ * would blank out `city`/`state` in the store).
  */
-function mergeFormData(base: DraftFormData, partial: Partial<DraftFormData>): DraftFormData {
-  const merged: DraftFormData = {...base, ...partial};
+function mergeFormData(
+  base: DraftFormData,
+  partial: Partial<DraftFormData>,
+): DraftFormData {
+  const merged: DraftFormData = { ...base, ...partial };
 
   if (partial.address) {
     const prevAddress = base.address?.[0] ?? {};
     const nextAddress = partial.address[0] ?? {};
-    merged.address = [{...prevAddress, ...nextAddress}];
+    merged.address = [{ ...prevAddress, ...nextAddress }];
   } else {
     merged.address = base.address;
-  }
-
-  if (partial.nextOfKin) {
-    merged.nextOfKin = {...base.nextOfKin, ...partial.nextOfKin};
-  } else {
-    merged.nextOfKin = base.nextOfKin;
   }
 
   return merged;
 }
 
-type SecurityCheckSubStep = "OTP" | "SECURITY_QUESTION" | "FACIAL_RECOGNITION" | null;
+type SecurityCheckSubStep =
+  | 'OTP'
+  | 'SECURITY_QUESTION'
+  | 'FACIAL_RECOGNITION'
+  | null;
 
 interface OnboardingState {
   productCode: ProductCode | null;
@@ -77,8 +83,17 @@ interface OnboardingState {
    * Confirmation screen reads it straight from here instead of a query.
    */
   finalizeResult: FinalizeApplicationResponse | null;
+  /**
+   * Primary identifier from this session's identifier screen — used only
+   * for the same-tab duplicate-product guard. Never persisted.
+   */
+  primaryIdentifierValue: string | null;
 
-  setFromStartResponse: (response: StartApplicationResponse, productCode: ProductCode) => void;
+  setFromStartResponse: (
+    response: StartApplicationResponse,
+    productCode: ProductCode,
+  ) => void;
+  setPrimaryIdentifierValue: (value: string) => void;
   setCurrentStep: (step: DraftStep) => void;
   patchFormData: (partial: Partial<DraftFormData>) => void;
   setSecurityCheckSubStep: (subStep: SecurityCheckSubStep) => void;
@@ -95,14 +110,16 @@ const INITIAL_STATE = {
   formData: {},
   securityCheckSubStep: null,
   finalizeResult: null,
+  primaryIdentifierValue: null,
 } satisfies Omit<
   OnboardingState,
-  | "setFromStartResponse"
-  | "setCurrentStep"
-  | "patchFormData"
-  | "setSecurityCheckSubStep"
-  | "setFinalizeResult"
-  | "reset"
+  | 'setFromStartResponse'
+  | 'setPrimaryIdentifierValue'
+  | 'setCurrentStep'
+  | 'patchFormData'
+  | 'setSecurityCheckSubStep'
+  | 'setFinalizeResult'
+  | 'reset'
 >;
 
 export const useOnboardingStore = create<OnboardingState>()(
@@ -124,36 +141,32 @@ export const useOnboardingStore = create<OnboardingState>()(
             hasFormData || !response.existingCustomer
               ? formDataFromResponse
               : prefillFromExistingCustomer(response.existingCustomer),
-          // Existing customers land straight on SECURITY_VERIFICATION — make
-          // sure the first sub-modal is queued up rather than left null.
-          // OTP first (phone-possession check), then security questions,
-          // then facial — see SecurityVerificationStep. Also check
-          // currentStep directly, not just requiresSecurityCheck: resuming a
-          // draft that was left mid-verification comes back with
-          // requiresSecurityCheck: false (it's only true on a brand-new
-          // match) but currentStep still "SECURITY_VERIFICATION" — without
-          // this, the screen renders with no sub-step set and no modal ever
-          // opens, leaving the user stuck with nothing to interact with.
+          // Existing customers land on SECURITY_VERIFICATION — OTP then facial.
           securityCheckSubStep:
-            response.requiresSecurityCheck || response.currentStep === "SECURITY_VERIFICATION"
-              ? "OTP"
+            response.requiresSecurityCheck ||
+            response.currentStep === 'SECURITY_VERIFICATION'
+              ? 'OTP'
               : null,
         });
       },
 
-      setCurrentStep: (step) => set({currentStep: step}),
+      setPrimaryIdentifierValue: (value) =>
+        set({ primaryIdentifierValue: value }),
+
+      setCurrentStep: (step) => set({ currentStep: step }),
 
       patchFormData: (partial) =>
-        set((state) => ({formData: mergeFormData(state.formData, partial)})),
+        set((state) => ({ formData: mergeFormData(state.formData, partial) })),
 
-      setSecurityCheckSubStep: (subStep) => set({securityCheckSubStep: subStep}),
+      setSecurityCheckSubStep: (subStep) =>
+        set({ securityCheckSubStep: subStep }),
 
-      setFinalizeResult: (result) => set({finalizeResult: result}),
+      setFinalizeResult: (result) => set({ finalizeResult: result }),
 
       reset: () => set(INITIAL_STATE),
     }),
     {
-      name: "onboarding-draft",
+      name: 'onboarding-draft',
       // Only what's needed to resume a same-tab reload — everything else
       // (isExistingCustomer, requiresSecurityCheck, sub-step) is re-derived
       // from the server via GET /applications/{draftId} or a fresh /start.
@@ -164,6 +177,7 @@ export const useOnboardingStore = create<OnboardingState>()(
         formData: state.formData,
         isExistingCustomer: state.isExistingCustomer,
         requiresSecurityCheck: state.requiresSecurityCheck,
+        finalizeResult: state.finalizeResult,
       }),
     },
   ),

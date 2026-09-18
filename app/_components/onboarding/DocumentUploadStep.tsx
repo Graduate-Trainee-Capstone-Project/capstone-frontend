@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import {useState} from "react";
+import {useRouter} from "next/navigation";
 import toast from "react-hot-toast";
-import { useSaveDraft } from "@/app/_hooks";
-import { useOnboardingStore } from "@/app/_hooks/useOnboardingStore";
-import { Button } from "@/app/_ui/Button";
-import { cn } from "@/app/_utils/cn";
-import { documentsFromCache } from "@/app/_utils/formData";
-import { PRODUCT_DOCUMENT_SLOTS, ROUTES, type DocumentSlotConfig } from "@/app/_constants";
+import {useSaveDraft} from "@/app/_hooks";
+import {useOnboardingStore} from "@/app/_hooks/useOnboardingStore";
+import {cn} from "@/app/_utils/cn";
+import {documentsFromCache} from "@/app/_utils/formData";
+import {previousWizardStep} from "@/app/_utils/wizard";
+import {PRODUCT_DOCUMENT_SLOTS, ROUTES, type DocumentSlotConfig} from "@/app/_constants";
+import {WizardStepActions} from "@/app/_components/onboarding/WizardStepActions";
+import type {DraftStep} from "@/app/_types";
 
 /**
  * BE's /save accepts ONE real file per call (`documentType` + `documentFile`,
@@ -25,6 +27,7 @@ export function DocumentUploadStep() {
   const productCode = useOnboardingStore((state) => state.productCode);
   const cachedFormData = useOnboardingStore((state) => state.formData);
   const patchFormData = useOnboardingStore((state) => state.patchFormData);
+  const isExistingCustomer = useOnboardingStore((state) => state.isExistingCustomer);
   const setCurrentStep = useOnboardingStore((state) => state.setCurrentStep);
   const resetStore = useOnboardingStore((state) => state.reset);
   const saveDraft = useSaveDraft(draftId ?? "");
@@ -42,12 +45,17 @@ export function DocumentUploadStep() {
 
   function handleFileChange(slot: DocumentSlotConfig, file: File | null) {
     if (!file) return;
-    setNames((prev) => ({ ...prev, [slot.key]: file.name }));
-    setErrors((prev) => ({ ...prev, [slot.key]: "" }));
-    patchFormData({ documents: [{ type: slot.label, url: file.name }] });
+    const maxBytes = 10 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      setErrors((prev) => ({...prev, [slot.key]: "Each file must be 10 MB or smaller."}));
+      return;
+    }
+    setNames((prev) => ({...prev, [slot.key]: file.name}));
+    setErrors((prev) => ({...prev, [slot.key]: ""}));
+    patchFormData({documents: [{type: slot.label, url: file.name}]});
     saveDraft.mutate(
-      { currentStep: "DOCUMENT_UPLOAD", channel: "WEB", documentType: slot.label, documentFile: file },
-      { onError: (error) => toast.error(error.message || "Couldn't upload right now. Please try again.") },
+      {currentStep: "DOCUMENT_UPLOAD", channel: "WEB", documentType: slot.label, documentFile: file},
+      {onError: (error) => toast.error(error.message || "Couldn't upload right now. Please try again.")},
     );
   }
 
@@ -60,34 +68,38 @@ export function DocumentUploadStep() {
     return Object.keys(nextErrors).length === 0;
   }
 
-  function handleSaveAndContinueLater() {
+  function persist(step: DraftStep, onSuccess?: (currentStep: DraftStep) => void) {
     saveDraft.mutate(
-      { currentStep: "DOCUMENT_UPLOAD", channel: "WEB" },
+      {currentStep: step, channel: "WEB"},
       {
-        onSuccess: () => {
-          toast.success("Saved — come back anytime with your details to pick up where you left off.");
-          resetStore();
-          router.push(ROUTES.home);
-        },
+        onSuccess: (data) => onSuccess?.(data.currentStep),
         onError: (error) => toast.error(error.message || "Couldn't save right now. Please try again."),
       },
     );
+  }
+
+  function handleSaveAndContinueLater() {
+    persist("DOCUMENT_UPLOAD", () => {
+      toast.success("Saved — come back anytime with your details to pick up where you left off.");
+      resetStore();
+      router.push(ROUTES.home);
+    });
+  }
+
+  function handleBack() {
+    const previous = previousWizardStep("DOCUMENT_UPLOAD", isExistingCustomer);
+    if (!previous) return;
+    persist(previous, (step) => setCurrentStep(step));
   }
 
   function handleContinue(event: React.FormEvent) {
     event.preventDefault();
     if (!validate()) return;
-    saveDraft.mutate(
-      { currentStep: "REVIEW", channel: "WEB" },
-      {
-        onSuccess: (data) => setCurrentStep(data.currentStep),
-        onError: (error) => toast.error(error.message || "Couldn't save right now. Please try again."),
-      },
-    );
+    persist("REVIEW", (step) => setCurrentStep(step));
   }
 
   return (
-    <form onSubmit={handleContinue} className="flex flex-col gap-6">
+    <form onSubmit={handleContinue} method="post" className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
         <h2 className="text-xl font-semibold text-grey-900">Upload your documents</h2>
         <p className="text-sm text-grey-600">We need these to verify your application.</p>
@@ -125,19 +137,11 @@ export function DocumentUploadStep() {
         ))}
       </div>
 
-      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={handleSaveAndContinueLater}
-          isLoading={saveDraft.isPending}
-        >
-          Save and continue later
-        </Button>
-        <Button type="submit" isLoading={saveDraft.isPending}>
-          Continue
-        </Button>
-      </div>
+      <WizardStepActions
+        onBack={handleBack}
+        onSaveLater={handleSaveAndContinueLater}
+        isLoading={saveDraft.isPending}
+      />
     </form>
   );
 }
