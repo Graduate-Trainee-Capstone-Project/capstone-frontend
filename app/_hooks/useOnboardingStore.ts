@@ -88,6 +88,12 @@ interface OnboardingState {
    * for the same-tab duplicate-product guard. Never persisted.
    */
   primaryIdentifierValue: string | null;
+  /**
+   * Mock BVN bio data waiting to be revealed on PersonalInfoStep behind a
+   * simulated fetch delay — see [[mockBvnDirectory]]. UI-only, never
+   * persisted: a reload should not replay the "loading" moment.
+   */
+  pendingBvnPrefill: DraftFormData | null;
 
   setFromStartResponse: (
     response: StartApplicationResponse,
@@ -98,6 +104,7 @@ interface OnboardingState {
   patchFormData: (partial: Partial<DraftFormData>) => void;
   setSecurityCheckSubStep: (subStep: SecurityCheckSubStep) => void;
   setFinalizeResult: (result: FinalizeApplicationResponse) => void;
+  setPendingBvnPrefill: (data: DraftFormData | null) => void;
   reset: () => void;
 }
 
@@ -111,6 +118,7 @@ const INITIAL_STATE = {
   securityCheckSubStep: null,
   finalizeResult: null,
   primaryIdentifierValue: null,
+  pendingBvnPrefill: null,
 } satisfies Omit<
   OnboardingState,
   | 'setFromStartResponse'
@@ -119,6 +127,7 @@ const INITIAL_STATE = {
   | 'patchFormData'
   | 'setSecurityCheckSubStep'
   | 'setFinalizeResult'
+  | 'setPendingBvnPrefill'
   | 'reset'
 >;
 
@@ -163,6 +172,8 @@ export const useOnboardingStore = create<OnboardingState>()(
         set({ securityCheckSubStep: subStep }),
 
       setFinalizeResult: (result) => set({ finalizeResult: result }),
+
+      setPendingBvnPrefill: (data) => set({ pendingBvnPrefill: data }),
 
       reset: () => set(INITIAL_STATE),
     }),
