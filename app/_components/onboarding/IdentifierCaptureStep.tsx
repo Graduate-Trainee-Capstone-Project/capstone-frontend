@@ -1,18 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import {useState} from "react";
 import toast from "react-hot-toast";
-import { ApiRequestError, useProduct, useStartApplication } from "@/app/_hooks";
-import { saveDraftAction } from "@/app/_lib/actions";
-import { useOnboardingStore } from "@/app/_hooks/useOnboardingStore";
-import { IdentifierField } from "@/app/_components/onboarding/IdentifierField";
-import { ExistingCustomerBanner } from "@/app/_components/onboarding/ExistingCustomerBanner";
-import { Button } from "@/app/_ui/Button";
-import { Skeleton } from "@/app/_ui/Skeleton";
-import { normalizePhone, validateIdentifier } from "@/app/_utils/validators";
-import { hasCompletedProduct } from "@/app/_utils/completedProducts";
-import { rememberBvn, rememberedBvn } from "@/app/_utils/knownBvn";
-import type { DraftFormData, DraftStep, ExistingCustomerData, IdentifierType, ProductCode, SaveDraftRequest } from "@/app/_types";
+import {ApiRequestError, useProduct, useStartApplication} from "@/app/_hooks";
+import {saveDraftAction} from "@/app/_lib/actions";
+import {useOnboardingStore} from "@/app/_hooks/useOnboardingStore";
+import {IdentifierField} from "@/app/_components/onboarding/IdentifierField";
+import {Button} from "@/app/_ui/Button";
+import {Skeleton} from "@/app/_ui/Skeleton";
+import {normalizePhone, validateIdentifier} from "@/app/_utils/validators";
+import {hasCompletedProduct} from "@/app/_utils/completedProducts";
+import {rememberBvn} from "@/app/_utils/knownBvn";
+import type {DraftFormData, DraftStep, ExistingCustomerData, IdentifierType, ProductCode, SaveDraftRequest} from "@/app/_types";
 
 interface IdentifierCaptureStepProps {
   productCode: ProductCode;
@@ -33,14 +32,8 @@ function toExistingCustomerSavePayload(existing: ExistingCustomerData, currentSt
   };
 }
 
-/** Live stockbroking seed is BVN+EMAIL; the UI collects email only. */
-function identifiersToCollect(productCode: ProductCode, required: IdentifierType[]): IdentifierType[] {
-  if (productCode === "STOCKBROKING") return ["EMAIL"];
-  return required;
-}
-
-export function IdentifierCaptureStep({ productCode }: IdentifierCaptureStepProps) {
-  const { data: product, isLoading, isError } = useProduct(productCode);
+export function IdentifierCaptureStep({productCode}: IdentifierCaptureStepProps) {
+  const {data: product, isLoading, isError} = useProduct(productCode);
   const startApplication = useStartApplication();
   const setFromStartResponse = useOnboardingStore((state) => state.setFromStartResponse);
   const setPrimaryIdentifierValue = useOnboardingStore((state) => state.setPrimaryIdentifierValue);
@@ -63,14 +56,13 @@ export function IdentifierCaptureStep({ productCode }: IdentifierCaptureStepProp
     return <p className="text-sm text-error-400">We couldn&apos;t load this product. Please go back and try again.</p>;
   }
 
-  const collectedIdentifiers = identifiersToCollect(productCode, product.requiredIdentifiers);
-  const [primaryType, secondaryType] = collectedIdentifiers;
+  const requiredIdentifiers = product.requiredIdentifiers;
+  const [primaryType, secondaryType] = requiredIdentifiers;
   const productName = product.productName;
-  const bannerIdentifier = collectedIdentifiers[0] ?? "BVN";
 
   function handleChange(type: IdentifierType, value: string) {
-    setValues((prev) => ({ ...prev, [type]: value }));
-    setErrors((prev) => ({ ...prev, [type]: "" }));
+    setValues((prev) => ({...prev, [type]: value}));
+    setErrors((prev) => ({...prev, [type]: ""}));
   }
 
   function normalize(type: IdentifierType, value: string): string {
@@ -81,7 +73,7 @@ export function IdentifierCaptureStep({ productCode }: IdentifierCaptureStepProp
     event.preventDefault();
 
     const nextErrors: Record<string, string> = {};
-    for (const type of collectedIdentifiers) {
+    for (const type of requiredIdentifiers) {
       const result = validateIdentifier(type, values[type] ?? "");
       if (!result.valid) nextErrors[type] = result.message ?? "Invalid value.";
     }
@@ -116,9 +108,6 @@ export function IdentifierCaptureStep({ productCode }: IdentifierCaptureStepProp
           const identifierPrefill: Partial<DraftFormData> = {};
           if (values.EMAIL) identifierPrefill.email = normalize("EMAIL", values.EMAIL);
           if (values.PHONE) identifierPrefill.phoneNumber = normalize("PHONE", values.PHONE);
-          if (values.BVN) identifierPrefill.bvn = normalize("BVN", values.BVN);
-          const knownBvn = rememberedBvn();
-          if (knownBvn && !identifierPrefill.bvn) identifierPrefill.bvn = knownBvn;
           if (Object.keys(identifierPrefill).length > 0) {
             patchFormData(identifierPrefill);
           }
@@ -148,7 +137,7 @@ export function IdentifierCaptureStep({ productCode }: IdentifierCaptureStepProp
           if (error instanceof ApiRequestError && error.code === "VALIDATION_ERROR" && error.field) {
             const fieldType = error.field === "secondaryIdentifierValue" ? secondaryType : primaryType;
             if (fieldType) {
-              setErrors((prev) => ({ ...prev, [fieldType]: error.message }));
+              setErrors((prev) => ({...prev, [fieldType]: error.message}));
               return;
             }
           }
@@ -160,8 +149,6 @@ export function IdentifierCaptureStep({ productCode }: IdentifierCaptureStepProp
 
   return (
     <div className="flex flex-col gap-5">
-      {/* <ExistingCustomerBanner identifierType={bannerIdentifier} onPrefilled={patchFormData} /> */}
-
       <form onSubmit={handleSubmit} method="post" className="flex flex-col gap-5">
         <div className="flex flex-col gap-1">
           <h2 className="text-xl font-semibold text-grey-900">{product.productName}</h2>
@@ -170,7 +157,7 @@ export function IdentifierCaptureStep({ productCode }: IdentifierCaptureStepProp
           </p>
         </div>
 
-        {collectedIdentifiers.map((type) => (
+        {requiredIdentifiers.map((type) => (
           <IdentifierField
             key={type}
             type={type}

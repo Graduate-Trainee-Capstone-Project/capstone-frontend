@@ -113,14 +113,8 @@ export const mockProducts: Product[] = [
     productId: "prod-stockbroking",
     productCode: "STOCKBROKING",
     productName: "Stockbroking",
-    requiredIdentifiers: ["EMAIL"],
+    requiredIdentifiers: ["BVN"],
     additionalFieldsSchema: [
-      {
-        field: "bvn",
-        label: "Bank Verification Number (BVN)",
-        type: "text",
-        required: true,
-      },
       {
         field: "bankAccountOption",
         label: "Settlement bank account",
@@ -181,7 +175,6 @@ mockIdentifierIndex.set("BVN:12345678901", {
     address: [{street: "12 Marina Rd", city: "Lagos", state: "Lagos"}],
     email: "adaeze.okonkwo@example.com",
     phoneNumber: "+2348012345678",
-    bvn: "12345678901",
   },
 });
 mockIdentifierIndex.set("NIN:98765432109", {

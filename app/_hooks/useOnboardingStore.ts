@@ -130,24 +130,25 @@ export const useOnboardingStore = create<OnboardingState>()(
       setFromStartResponse: (response, productCode) => {
         const formDataFromResponse = response.formData ?? {};
         const hasFormData = Object.keys(formDataFromResponse).length > 0;
+        const incoming =
+          hasFormData || !response.existingCustomer
+            ? formDataFromResponse
+            : prefillFromExistingCustomer(response.existingCustomer);
 
-        set({
+        set((state) => ({
           productCode,
           draftId: response.draftId,
           currentStep: response.currentStep,
           isExistingCustomer: response.isExistingCustomer,
           requiresSecurityCheck: response.requiresSecurityCheck,
-          formData:
-            hasFormData || !response.existingCustomer
-              ? formDataFromResponse
-              : prefillFromExistingCustomer(response.existingCustomer),
-          // Existing customers land on SECURITY_VERIFICATION — OTP then facial.
+          // Keep fields collected before /start (email, personal info, BVN).
+          formData: mergeFormData(state.formData, incoming),
           securityCheckSubStep:
             response.requiresSecurityCheck ||
             response.currentStep === 'SECURITY_VERIFICATION'
               ? 'OTP'
               : null,
-        });
+        }));
       },
 
       setPrimaryIdentifierValue: (value) =>

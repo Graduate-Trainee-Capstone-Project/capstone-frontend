@@ -115,10 +115,8 @@ export function ReviewStep() {
 
     finalizeApplication.mutate(undefined, {
       onSuccess: (data) => {
-        if (productCode) {
-          if (primaryIdentifierValue) recordCompletedProduct(primaryIdentifierValue, productCode);
-          const bvn = typeof formData.bvn === "string" ? formData.bvn : "";
-          if (bvn) recordCompletedProduct(bvn, productCode);
+        if (primaryIdentifierValue && productCode) {
+          recordCompletedProduct(primaryIdentifierValue, productCode);
         }
         setFinalizeResult(data);
         setCurrentStep("SUBMITTED");

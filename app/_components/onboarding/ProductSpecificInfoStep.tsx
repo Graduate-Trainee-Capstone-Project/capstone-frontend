@@ -12,19 +12,12 @@ import {Skeleton} from "@/app/_ui/Skeleton";
 import {debounce} from "@/app/_utils/debounce";
 import {readSchemaField, toBackendProductFormData} from "@/app/_utils/formData";
 import {previousWizardStep} from "@/app/_utils/wizard";
-import {validateIdentifier} from "@/app/_utils/validators";
-import {rememberBvn, rememberedBvn} from "@/app/_utils/knownBvn";
 import {AUTOSAVE_DEBOUNCE_MS, additionalFieldsFor, ROUTES} from "@/app/_constants";
 import {stanbicIBTCBranches} from "@/app/_constants/stanbic_ibtc_branches";
 import type {AdditionalField, DraftStep, SaveDraftRequest} from "@/app/_types";
 import {WizardStepActions} from "@/app/_components/onboarding/WizardStepActions";
-import {IdentifierField} from "@/app/_components/onboarding/IdentifierField";
 
 function initialValueFor(field: AdditionalField, cached: unknown): string | boolean {
-  if (field.field === "bvn") {
-    if (typeof cached === "string" && cached.trim()) return cached.trim();
-    return rememberedBvn();
-  }
   if (field.type === "checkbox") return typeof cached === "boolean" ? cached : false;
   return typeof cached === "string" || typeof cached === "number" ? String(cached) : "";
 }
@@ -36,8 +29,6 @@ function initialValueFor(field: AdditionalField, cached: unknown): string | bool
  * form binder ignores — see B4 in the briefing.
  */
 function toSavePayload(values: Record<string, string | boolean>, currentStep: DraftStep): SaveDraftRequest {
-  const bvn = typeof values.bvn === "string" ? values.bvn.trim() : "";
-  if (bvn) rememberBvn(bvn);
   return {
     currentStep,
     channel: "WEB",
@@ -68,8 +59,6 @@ export function ProductSpecificInfoStep() {
   const [values, setValues] = useState<Record<string, string | boolean>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Mirrors `values` so the debounced autosave closure always reads the
-  // LATEST fields rather than whatever was current when it was created.
   const valuesRef = useRef(values);
   useEffect(() => {
     valuesRef.current = values;
@@ -89,17 +78,8 @@ export function ProductSpecificInfoStep() {
     });
   }, [product, cachedFormData]);
 
-  // Set once Continue / Save-and-continue-later has fired its own save —
-  // guards the debounce, not just cancels it once: a submit button stays
-  // focused after being clicked, and unmounting this form right after a
-  // successful transition fires a FRESH blur on it, re-arming the debounce
-  // AFTER the explicit cancel() below already ran. See the matching comment
-  // in PersonalInfoStep for the full failure mode this prevents.
   const committedRef = useRef(false);
 
-  // Always sends the FULL current snapshot, never a delta — consistent with
-  // PersonalInfoStep, and avoids ever depending on BE's per-field merge for
-  // fields it may not even recognize.
   const debouncedAutosaveRef = useRef<(() => void) & {cancel?: () => void}>(() => {});
   useEffect(() => {
     debouncedAutosaveRef.current = debounce(() => {
@@ -141,11 +121,6 @@ export function ProductSpecificInfoStep() {
   function validate(): boolean {
     const nextErrors: Record<string, string> = {};
     for (const field of schema) {
-      if (field.field === "bvn") {
-        const result = validateIdentifier("BVN", String(values.bvn ?? ""));
-        if (!result.valid) nextErrors.bvn = result.message ?? "Enter a valid BVN.";
-        continue;
-      }
       if (!field.required) continue;
       const value = values[field.field];
       const isEmpty = field.type === "checkbox" ? value !== true : !String(value ?? "").trim();
@@ -212,22 +187,6 @@ export function ProductSpecificInfoStep() {
                   {errors[field.field] && (
                     <span className="text-xs text-error-400">{errors[field.field]}</span>
                   )}
-                </div>
-              );
-            }
-
-            if (field.field === "bvn") {
-              return (
-                <div key={field.field} className="sm:col-span-2">
-                  <IdentifierField
-                    type="BVN"
-                    name="bvn"
-                    value={String(values.bvn ?? "")}
-                    onChange={(value) => updateField("bvn", value)}
-                    error={errors.bvn}
-                    required={field.required}
-                    helperText="We'll keep this on your profile so we can open a Stanbic IBTC bank account for settlement if you don't already have one."
-                  />
                 </div>
               );
             }

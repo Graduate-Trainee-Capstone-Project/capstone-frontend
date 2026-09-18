@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { useSaveDraft } from "@/app/_hooks";
-import { useOnboardingStore } from "@/app/_hooks/useOnboardingStore";
-import { Modal } from "@/app/_ui/Modal";
-import { OtpVerificationModal } from "@/app/_components/onboarding/OtpVerificationModal";
-import { FacialCaptureModal } from "@/app/_components/onboarding/FacialCaptureModal";
+import {useState} from "react";
+import {useSaveDraft} from "@/app/_hooks";
+import {useOnboardingStore} from "@/app/_hooks/useOnboardingStore";
+import {Modal} from "@/app/_ui/Modal";
+import {OtpVerificationModal} from "@/app/_components/onboarding/OtpVerificationModal";
+import {FacialCaptureModal} from "@/app/_components/onboarding/FacialCaptureModal";
 
 /**
  * Existing customers only — OTP then facial. Security questions are not
@@ -38,8 +38,8 @@ export function SecurityVerificationStep() {
   function handleFacialPassed() {
     setSecurityCheckSubStep(null);
     saveDraft.mutate(
-      { currentStep: "PERSONAL_INFO", channel: "WEB" },
-      { onSuccess: (data) => setCurrentStep(data.currentStep) },
+      {currentStep: "PERSONAL_INFO", channel: "WEB"},
+      {onSuccess: (data) => setCurrentStep(data.currentStep)},
     );
   }
 
