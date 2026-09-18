@@ -16,10 +16,23 @@ export const FALLBACK_ADDITIONAL_FIELDS: Partial<Record<ProductCode, AdditionalF
   ],
   INSURANCE: [
     {
-      field: "policyType",
-      label: "Policy type",
+      field: "fundType",
+      label: "Fund type",
       type: "select",
-      options: ["Life", "Motor", "Home", "Travel"],
+      options: ["Money Market", "Fixed Income", "Equity", "Balanced"],
+      required: true,
+    },
+    {
+      field: "riskAppetite",
+      label: "Risk appetite",
+      type: "select",
+      options: ["Conservative", "Moderate", "Aggressive"],
+      required: true,
+    },
+    {
+      field: "initialInvestment",
+      label: "Initial investment (NGN)",
+      type: "number",
       required: true,
     },
   ],

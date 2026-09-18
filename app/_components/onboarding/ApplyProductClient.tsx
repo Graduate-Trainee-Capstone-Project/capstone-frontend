@@ -13,6 +13,7 @@ import {ReviewStep} from "@/app/_components/onboarding/ReviewStep";
 import {ConfirmationStep} from "@/app/_components/onboarding/ConfirmationStep";
 import {Skeleton} from "@/app/_ui/Skeleton";
 import {ALREADY_COMPLETED_MESSAGE, isAlreadyCompletedMessage} from "@/app/_utils/applicationCopy";
+import {WizardProgress} from "@/app/_components/onboarding/WizardProgress";
 import type {ProductCode} from "@/app/_types";
 
 interface ApplyProductClientProps {
@@ -66,39 +67,36 @@ export function ApplyProductClient({productCode}: ApplyProductClientProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [applicationQuery.error]);
 
-  if (alreadyFinished) {
-    return <ConfirmationStep />;
-  }
+  let body;
 
-  if (hasMatchingCachedDraft && applicationQuery.isLoading) {
-    return (
+  if (alreadyFinished) {
+    body = <ConfirmationStep />;
+  } else if (hasMatchingCachedDraft && applicationQuery.isLoading) {
+    body = (
       <div className="flex flex-col gap-4">
         <Skeleton className="h-11 w-full" />
         <Skeleton className="h-11 w-full" />
         <Skeleton className="h-32 w-full" />
       </div>
     );
+  } else if (currentStep === "SECURITY_VERIFICATION") {
+    body = <SecurityVerificationStep />;
+  } else if (currentStep === "PERSONAL_INFO") {
+    body = <PersonalInfoStep />;
+  } else if (currentStep === "PRODUCT_SPECIFIC_INFO") {
+    body = <ProductSpecificInfoStep />;
+  } else if (currentStep === "DOCUMENT_UPLOAD") {
+    body = <DocumentUploadStep />;
+  } else if (currentStep === "REVIEW") {
+    body = <ReviewStep />;
+  } else {
+    body = <IdentifierCaptureStep productCode={productCode} />;
   }
 
-  if (currentStep === "SECURITY_VERIFICATION") {
-    return <SecurityVerificationStep />;
-  }
-
-  if (currentStep === "PERSONAL_INFO") {
-    return <PersonalInfoStep />;
-  }
-
-  if (currentStep === "PRODUCT_SPECIFIC_INFO") {
-    return <ProductSpecificInfoStep />;
-  }
-
-  if (currentStep === "DOCUMENT_UPLOAD") {
-    return <DocumentUploadStep />;
-  }
-
-  if (currentStep === "REVIEW") {
-    return <ReviewStep />;
-  }
-
-  return <IdentifierCaptureStep productCode={productCode} />;
+  return (
+    <div className="flex flex-col gap-8">
+      <WizardProgress />
+      {body}
+    </div>
+  );
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ROUTES } from "@/app/_constants";
+import { BrandLogo } from "@/app/_components/brand/BrandLogo";
 import { cn } from "@/app/_utils/cn";
 
 const NAV_LINKS = [
@@ -21,11 +22,11 @@ export function SiteHeader() {
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
         <Link
           href={ROUTES.holdings}
-          className="flex flex-col leading-tight"
+          className="flex items-center"
           onClick={() => setOpen(false)}
+          aria-label="Stanbic IBTC Holdings home"
         >
-          <span className="text-base font-bold text-white">Stanbic IBTC</span>
-          <span className="text-[11px] font-medium tracking-wide text-primary-100/80">HOLDINGS</span>
+          <BrandLogo variant="white" size="md" priority />
         </Link>
 
         {/* Desktop nav */}

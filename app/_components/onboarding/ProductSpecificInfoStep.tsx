@@ -12,7 +12,7 @@ import {Skeleton} from "@/app/_ui/Skeleton";
 import {debounce} from "@/app/_utils/debounce";
 import {readSchemaField, toBackendProductFormData} from "@/app/_utils/formData";
 import {previousWizardStep} from "@/app/_utils/wizard";
-import {AUTOSAVE_DEBOUNCE_MS, additionalFieldsFor, ROUTES} from "@/app/_constants";
+import {AUTOSAVE_DEBOUNCE_MS, additionalFieldsFor, productDisplayName, ROUTES} from "@/app/_constants";
 import {stanbicIBTCBranches} from "@/app/_constants/stanbic_ibtc_branches";
 import type {AdditionalField, DraftStep, SaveDraftRequest} from "@/app/_types";
 import {WizardStepActions} from "@/app/_components/onboarding/WizardStepActions";
@@ -166,7 +166,9 @@ export function ProductSpecificInfoStep() {
   return (
     <form onSubmit={handleContinue} method="post" className="flex flex-col gap-6" onBlur={handleBlur}>
       <div className="flex flex-col gap-1">
-        <h2 className="text-xl font-semibold text-grey-900">{product.productName} details</h2>
+        <h2 className="text-xl font-semibold text-grey-900">
+          {productDisplayName(productCode, product.productName)} details
+        </h2>
         <p className="text-sm text-grey-600">A few extra details specific to this product.</p>
       </div>
 

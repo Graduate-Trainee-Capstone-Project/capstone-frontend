@@ -11,6 +11,7 @@ import {Skeleton} from "@/app/_ui/Skeleton";
 import {normalizePhone, validateIdentifier} from "@/app/_utils/validators";
 import {hasCompletedProduct} from "@/app/_utils/completedProducts";
 import {rememberBvn} from "@/app/_utils/knownBvn";
+import {productDisplayName} from "@/app/_constants";
 import type {DraftFormData, DraftStep, ExistingCustomerData, IdentifierType, ProductCode, SaveDraftRequest} from "@/app/_types";
 
 interface IdentifierCaptureStepProps {
@@ -58,7 +59,7 @@ export function IdentifierCaptureStep({productCode}: IdentifierCaptureStepProps)
 
   const requiredIdentifiers = product.requiredIdentifiers;
   const [primaryType, secondaryType] = requiredIdentifiers;
-  const productName = product.productName;
+  const productName = productDisplayName(productCode, product.productName);
 
   function handleChange(type: IdentifierType, value: string) {
     setValues((prev) => ({...prev, [type]: value}));
@@ -151,7 +152,7 @@ export function IdentifierCaptureStep({productCode}: IdentifierCaptureStepProps)
     <div className="flex flex-col gap-5">
       <form onSubmit={handleSubmit} method="post" className="flex flex-col gap-5">
         <div className="flex flex-col gap-1">
-          <h2 className="text-xl font-semibold text-grey-900">{product.productName}</h2>
+          <h2 className="text-xl font-semibold text-grey-900">{productName}</h2>
           <p className="text-sm text-grey-600">
             Tell us a little about yourself so we can check whether you already have a profile with us.
           </p>

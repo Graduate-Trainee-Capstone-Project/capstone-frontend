@@ -6,7 +6,7 @@ import {useFinalizeApplication, useProduct, useSaveDraft} from "@/app/_hooks";
 import {useOnboardingStore} from "@/app/_hooks/useOnboardingStore";
 import {Checkbox} from "@/app/_ui/Checkbox";
 import {Skeleton} from "@/app/_ui/Skeleton";
-import {PRODUCT_DOCUMENT_SLOTS, additionalFieldsFor} from "@/app/_constants";
+import {PRODUCT_DOCUMENT_SLOTS, additionalFieldsFor, productDisplayName} from "@/app/_constants";
 import {readSchemaField} from "@/app/_utils/formData";
 import {previousWizardStep} from "@/app/_utils/wizard";
 import {recordCompletedProduct} from "@/app/_utils/completedProducts";
@@ -137,7 +137,11 @@ export function ReviewStep() {
       <div className="flex flex-col gap-1">
         <h2 className="text-xl font-semibold text-grey-900">Review your application</h2>
         <p className="text-sm text-grey-600">
-          Make sure everything below looks right before you submit{product ? ` for ${product.productName}` : ""}.
+          Make sure everything below looks right before you submit
+          {product
+            ? ` for ${productDisplayName(product.productCode, product.productName)}`
+            : ""}
+          .
         </p>
       </div>
 

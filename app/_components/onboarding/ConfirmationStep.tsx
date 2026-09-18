@@ -5,6 +5,7 @@ import {useOnboardingStore} from "@/app/_hooks/useOnboardingStore";
 import {Button} from "@/app/_ui/Button";
 import {ROUTES} from "@/app/_constants";
 import {displayAccountReference} from "@/app/_utils/applicationCopy";
+import {BrandLogo} from "@/app/_components/brand/BrandLogo";
 
 const SUCCESS_COPY =
   "Dear customer, your application was submitted successfully. Your account reference is";
@@ -36,6 +37,7 @@ export function ConfirmationStep() {
 
   return (
     <div className="flex flex-col items-center gap-5 py-4 text-center">
+      <BrandLogo variant="blue" size="sm" className="self-center" />
       <span className="flex size-14 items-center justify-center rounded-full bg-success-50 text-success-400">
         <svg
           xmlns="http://www.w3.org/2000/svg"

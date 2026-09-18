@@ -10,8 +10,12 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Capstone Project",
-  description: "A Capstone Project for Stanbic Graduate Trainee",
+  title: {
+    default: "Stanbic IBTC | Digital Onboarding",
+    template: "%s | Stanbic IBTC",
+  },
+  description:
+    "Open a Bank, Pension, Stockbroking, or Investment account with Stanbic IBTC — one digital onboarding flow across Holdings.",
 };
 
 export default function RootLayout({children}: LayoutProps<"/">) {

@@ -134,16 +134,24 @@ export const mockProducts: Product[] = [
   {
     productId: "prod-insurance",
     productCode: "INSURANCE",
-    productName: "Insurance",
+    productName: "Investment account",
     requiredIdentifiers: ["BVN", "PHONE"],
     additionalFieldsSchema: [
       {
-        field: "policyType",
-        label: "Policy type",
+        field: "fundType",
+        label: "Fund type",
         type: "select",
-        options: ["Life", "Motor", "Home", "Travel"],
+        options: ["Money Market", "Fixed Income", "Equity", "Balanced"],
         required: true,
       },
+      {
+        field: "riskAppetite",
+        label: "Risk appetite",
+        type: "select",
+        options: ["Conservative", "Moderate", "Aggressive"],
+        required: true,
+      },
+      {field: "initialInvestment", label: "Initial investment (NGN)", type: "number", required: true},
     ],
   },
 ];
