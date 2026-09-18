@@ -1,16 +1,16 @@
 "use client";
 
-import {useState} from "react";
+import { useState } from "react";
 import toast from "react-hot-toast";
-import {ApiRequestError, useProduct, useStartApplication} from "@/app/_hooks";
-import {saveDraftAction} from "@/app/_lib/actions";
-import {useOnboardingStore} from "@/app/_hooks/useOnboardingStore";
-import {IdentifierField} from "@/app/_components/onboarding/IdentifierField";
-import {ExistingCustomerBanner} from "@/app/_components/onboarding/ExistingCustomerBanner";
-import {Button} from "@/app/_ui/Button";
-import {Skeleton} from "@/app/_ui/Skeleton";
-import {normalizePhone, validateIdentifier} from "@/app/_utils/validators";
-import type {DraftStep, ExistingCustomerData, IdentifierType, ProductCode, SaveDraftRequest} from "@/app/_types";
+import { ApiRequestError, useProduct, useStartApplication } from "@/app/_hooks";
+import { saveDraftAction } from "@/app/_lib/actions";
+import { useOnboardingStore } from "@/app/_hooks/useOnboardingStore";
+import { IdentifierField } from "@/app/_components/onboarding/IdentifierField";
+import { ExistingCustomerBanner } from "@/app/_components/onboarding/ExistingCustomerBanner";
+import { Button } from "@/app/_ui/Button";
+import { Skeleton } from "@/app/_ui/Skeleton";
+import { normalizePhone, validateIdentifier } from "@/app/_utils/validators";
+import type { DraftStep, ExistingCustomerData, IdentifierType, ProductCode, SaveDraftRequest } from "@/app/_types";
 
 interface IdentifierCaptureStepProps {
   productCode: ProductCode;
@@ -39,8 +39,8 @@ function toExistingCustomerSavePayload(existing: ExistingCustomerData, currentSt
   };
 }
 
-export function IdentifierCaptureStep({productCode}: IdentifierCaptureStepProps) {
-  const {data: product, isLoading, isError} = useProduct(productCode);
+export function IdentifierCaptureStep({ productCode }: IdentifierCaptureStepProps) {
+  const { data: product, isLoading, isError } = useProduct(productCode);
   const startApplication = useStartApplication();
   const setFromStartResponse = useOnboardingStore((state) => state.setFromStartResponse);
   const patchFormData = useOnboardingStore((state) => state.patchFormData);
@@ -66,8 +66,8 @@ export function IdentifierCaptureStep({productCode}: IdentifierCaptureStepProps)
   const [primaryType, secondaryType] = requiredIdentifiers;
 
   function handleChange(type: IdentifierType, value: string) {
-    setValues((prev) => ({...prev, [type]: value}));
-    setErrors((prev) => ({...prev, [type]: ""}));
+    setValues((prev) => ({ ...prev, [type]: value }));
+    setErrors((prev) => ({ ...prev, [type]: "" }));
   }
 
   function normalize(type: IdentifierType, value: string): string {
@@ -115,7 +115,7 @@ export function IdentifierCaptureStep({productCode}: IdentifierCaptureStepProps)
           if (error instanceof ApiRequestError && error.code === "VALIDATION_ERROR" && error.field) {
             const fieldType = error.field === "secondaryIdentifierValue" ? secondaryType : primaryType;
             if (fieldType) {
-              setErrors((prev) => ({...prev, [fieldType]: error.message}));
+              setErrors((prev) => ({ ...prev, [fieldType]: error.message }));
               return;
             }
           }

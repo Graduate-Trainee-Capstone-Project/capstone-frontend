@@ -1,18 +1,18 @@
 "use client";
 
-import {useEffect} from "react";
+import { useEffect } from "react";
 import toast from "react-hot-toast";
-import {ApiRequestError, useApplication} from "@/app/_hooks";
-import {useOnboardingStore} from "@/app/_hooks/useOnboardingStore";
-import {IdentifierCaptureStep} from "@/app/_components/onboarding/IdentifierCaptureStep";
-import {SecurityVerificationStep} from "@/app/_components/onboarding/SecurityVerificationStep";
-import {PersonalInfoStep} from "@/app/_components/onboarding/PersonalInfoStep";
-import {ProductSpecificInfoStep} from "@/app/_components/onboarding/ProductSpecificInfoStep";
-import {DocumentUploadStep} from "@/app/_components/onboarding/DocumentUploadStep";
-import {ReviewStep} from "@/app/_components/onboarding/ReviewStep";
-import {ConfirmationStep} from "@/app/_components/onboarding/ConfirmationStep";
-import {Skeleton} from "@/app/_ui/Skeleton";
-import type {ProductCode} from "@/app/_types";
+import { ApiRequestError, useApplication } from "@/app/_hooks";
+import { useOnboardingStore } from "@/app/_hooks/useOnboardingStore";
+import { IdentifierCaptureStep } from "@/app/_components/onboarding/IdentifierCaptureStep";
+import { SecurityVerificationStep } from "@/app/_components/onboarding/SecurityVerificationStep";
+import { PersonalInfoStep } from "@/app/_components/onboarding/PersonalInfoStep";
+import { ProductSpecificInfoStep } from "@/app/_components/onboarding/ProductSpecificInfoStep";
+import { DocumentUploadStep } from "@/app/_components/onboarding/DocumentUploadStep";
+import { ReviewStep } from "@/app/_components/onboarding/ReviewStep";
+import { ConfirmationStep } from "@/app/_components/onboarding/ConfirmationStep";
+import { Skeleton } from "@/app/_ui/Skeleton";
+import type { ProductCode } from "@/app/_types";
 
 interface ApplyProductClientProps {
   productCode: ProductCode;
@@ -25,7 +25,7 @@ interface ApplyProductClientProps {
  * GET /applications/{draftId}; otherwise fall back to identifier capture,
  * which re-triggers the identifier-based resume/existing-customer flow.
  */
-export function ApplyProductClient({productCode}: ApplyProductClientProps) {
+export function ApplyProductClient({ productCode }: ApplyProductClientProps) {
   const storedProductCode = useOnboardingStore((state) => state.productCode);
   const draftId = useOnboardingStore((state) => state.draftId);
   const currentStep = useOnboardingStore((state) => state.currentStep);

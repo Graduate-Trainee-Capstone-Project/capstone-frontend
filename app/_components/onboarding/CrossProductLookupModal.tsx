@@ -1,15 +1,15 @@
 "use client";
 
-import {useState} from "react";
+import { useState } from "react";
 import toast from "react-hot-toast";
-import {useLookupCustomer} from "@/app/_hooks";
-import {Modal} from "@/app/_ui/Modal";
-import {Input} from "@/app/_ui/Input";
-import {Checkbox} from "@/app/_ui/Checkbox";
-import {Button} from "@/app/_ui/Button";
-import {IDENTIFIER_META} from "@/app/_constants";
-import {normalizePhone, validateIdentifier} from "@/app/_utils/validators";
-import type {IdentifierType} from "@/app/_types";
+import { useLookupCustomer } from "@/app/_hooks";
+import { Modal } from "@/app/_ui/Modal";
+import { Input } from "@/app/_ui/Input";
+import { Checkbox } from "@/app/_ui/Checkbox";
+import { Button } from "@/app/_ui/Button";
+import { IDENTIFIER_META } from "@/app/_constants";
+import { normalizePhone, validateIdentifier } from "@/app/_utils/validators";
+import type { IdentifierType } from "@/app/_types";
 
 interface CrossProductLookupModalProps {
   isOpen: boolean;
@@ -81,7 +81,7 @@ export function CrossProductLookupModal({
       identifierType === "PHONE" ? normalizePhone(identifierValue) : identifierValue.trim();
 
     lookupCustomer.mutate(
-      {identifierType, identifierValue: value},
+      { identifierType, identifierValue: value },
       {
         onSuccess: (data) => {
           if (data.matched && data.formData) {

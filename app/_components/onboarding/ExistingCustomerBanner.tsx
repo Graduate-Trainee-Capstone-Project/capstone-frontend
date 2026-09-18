@@ -1,9 +1,9 @@
 "use client";
 
-import {useState} from "react";
-import {CrossProductLookupModal} from "@/app/_components/onboarding/CrossProductLookupModal";
-import {IDENTIFIER_META} from "@/app/_constants";
-import type {IdentifierType} from "@/app/_types";
+import { useState } from "react";
+import { CrossProductLookupModal } from "@/app/_components/onboarding/CrossProductLookupModal";
+import { IDENTIFIER_META } from "@/app/_constants";
+import type { IdentifierType } from "@/app/_types";
 
 interface ExistingCustomerBannerProps {
   identifierType?: IdentifierType;

@@ -142,7 +142,7 @@ export function PersonalInfoStep() {
   // per-sub-field), so a partial save would risk dropping previously-saved
   // city/state.
   const debouncedAutosaveRef = useRef<(() => void) & { cancel?: () => void }>(
-    () => {},
+    () => { },
   );
   useEffect(() => {
     debouncedAutosaveRef.current = debounce(() => {

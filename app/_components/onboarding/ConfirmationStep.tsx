@@ -1,9 +1,9 @@
 "use client";
 
-import {useRouter} from "next/navigation";
-import {useOnboardingStore} from "@/app/_hooks/useOnboardingStore";
-import {Button} from "@/app/_ui/Button";
-import {ROUTES} from "@/app/_constants";
+import { useRouter } from "next/navigation";
+import { useOnboardingStore } from "@/app/_hooks/useOnboardingStore";
+import { Button } from "@/app/_ui/Button";
+import { ROUTES } from "@/app/_constants";
 
 export function ConfirmationStep() {
   const router = useRouter();

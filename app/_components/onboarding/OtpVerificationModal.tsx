@@ -1,8 +1,8 @@
 "use client";
 
-import {useState} from "react";
-import {Input} from "@/app/_ui/Input";
-import {Button} from "@/app/_ui/Button";
+import { useState } from "react";
+import { Input } from "@/app/_ui/Input";
+import { Button } from "@/app/_ui/Button";
 
 interface OtpVerificationModalProps {
   onPassed: () => void;
@@ -15,7 +15,7 @@ const OTP_PATTERN = /^\d{6}$/;
  * (docs/justin-backend-alignment-briefing.md). Any 6 digits pass; there is
  * no real OTP to check against, so this never calls submitSecurityCheckAction.
  */
-export function OtpVerificationModal({onPassed}: OtpVerificationModalProps) {
+export function OtpVerificationModal({ onPassed }: OtpVerificationModalProps) {
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
 

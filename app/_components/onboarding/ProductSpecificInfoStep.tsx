@@ -1,19 +1,19 @@
 "use client";
 
-import {useEffect, useRef, useState} from "react";
-import {useRouter} from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import {useProduct, useSaveDraft} from "@/app/_hooks";
-import {useOnboardingStore} from "@/app/_hooks/useOnboardingStore";
-import {Input} from "@/app/_ui/Input";
-import {Select} from "@/app/_ui/Select";
-import {Checkbox} from "@/app/_ui/Checkbox";
-import {Button} from "@/app/_ui/Button";
-import {Skeleton} from "@/app/_ui/Skeleton";
-import {debounce} from "@/app/_utils/debounce";
-import {readSchemaField, toBackendProductFormData} from "@/app/_utils/formData";
-import {AUTOSAVE_DEBOUNCE_MS, ROUTES} from "@/app/_constants";
-import type {AdditionalField, DraftStep, SaveDraftRequest} from "@/app/_types";
+import { useProduct, useSaveDraft } from "@/app/_hooks";
+import { useOnboardingStore } from "@/app/_hooks/useOnboardingStore";
+import { Input } from "@/app/_ui/Input";
+import { Select } from "@/app/_ui/Select";
+import { Checkbox } from "@/app/_ui/Checkbox";
+import { Button } from "@/app/_ui/Button";
+import { Skeleton } from "@/app/_ui/Skeleton";
+import { debounce } from "@/app/_utils/debounce";
+import { readSchemaField, toBackendProductFormData } from "@/app/_utils/formData";
+import { AUTOSAVE_DEBOUNCE_MS, ROUTES } from "@/app/_constants";
+import type { AdditionalField, DraftStep, SaveDraftRequest } from "@/app/_types";
 
 function initialValueFor(field: AdditionalField, cached: unknown): string | boolean {
   if (field.type === "checkbox") return typeof cached === "boolean" ? cached : false;
@@ -48,7 +48,7 @@ export function ProductSpecificInfoStep() {
   const setCurrentStep = useOnboardingStore((state) => state.setCurrentStep);
   const resetStore = useOnboardingStore((state) => state.reset);
 
-  const {data: product, isLoading, isError} = useProduct(productCode ?? undefined);
+  const { data: product, isLoading, isError } = useProduct(productCode ?? undefined);
   const saveDraft = useSaveDraft(draftId ?? "");
 
   const schema = product?.additionalFieldsSchema ?? [];
@@ -67,7 +67,7 @@ export function ProductSpecificInfoStep() {
     const fields = product?.additionalFieldsSchema;
     if (!fields?.length) return;
     setValues((prev) => {
-      const next = {...prev};
+      const next = { ...prev };
       for (const field of fields) {
         if (next[field.field] === undefined) {
           next[field.field] = initialValueFor(field, readSchemaField(cachedFormData, field.field));
@@ -88,7 +88,7 @@ export function ProductSpecificInfoStep() {
   // Always sends the FULL current snapshot, never a delta — consistent with
   // PersonalInfoStep, and avoids ever depending on BE's per-field merge for
   // fields it may not even recognize.
-  const debouncedAutosaveRef = useRef<(() => void) & {cancel?: () => void}>(() => {});
+  const debouncedAutosaveRef = useRef<(() => void) & { cancel?: () => void }>(() => { });
   useEffect(() => {
     debouncedAutosaveRef.current = debounce(() => {
       if (!draftId || committedRef.current) return;
@@ -118,8 +118,8 @@ export function ProductSpecificInfoStep() {
   }
 
   function updateField(field: string, value: string | boolean) {
-    setValues((prev) => ({...prev, [field]: value}));
-    setErrors((prev) => ({...prev, [field]: ""}));
+    setValues((prev) => ({ ...prev, [field]: value }));
+    setErrors((prev) => ({ ...prev, [field]: "" }));
   }
 
   function handleBlur() {
@@ -200,7 +200,7 @@ export function ProductSpecificInfoStep() {
                   label={field.label}
                   name={field.field}
                   placeholder={`Select ${field.label.toLowerCase()}`}
-                  options={(field.options ?? []).map((option) => ({value: option, label: option}))}
+                  options={(field.options ?? []).map((option) => ({ value: option, label: option }))}
                   value={String(values[field.field] ?? "")}
                   onChange={(e) => updateField(field.field, e.target.value)}
                   error={errors[field.field]}

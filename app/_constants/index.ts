@@ -8,7 +8,9 @@ import type {IdentifierType, ProductCode} from "@/app/_types";
 export const PRODUCT_DISPLAY_COPY: Record<ProductCode, {description: string}> = {
   SAVINGS: {description: "Open a savings account and start earning interest from day one."},
   CURRENT: {description: "A current account built for everyday transactions and business."},
-  PENSION_RSA: {description: "Register a Retirement Savings Account with Stanbic IBTC Pension Managers."},
+  PENSION_RSA: {
+    description: "Register a Retirement Savings Account with Stanbic IBTC Pension Managers.",
+  },
   STOCKBROKING: {description: "Trade and invest in the Nigerian stock market."},
   INSURANCE: {description: "Protect what matters with a Stanbic IBTC insurance policy."},
 };
@@ -19,10 +21,25 @@ export const PRODUCT_DISPLAY_COPY: Record<ProductCode, {description: string}> = 
  */
 export const IDENTIFIER_META: Record<
   IdentifierType,
-  {label: string; placeholder: string; inputMode: "numeric" | "email" | "tel" | "text"; maxLength?: number}
+  {
+    label: string;
+    placeholder: string;
+    inputMode: "numeric" | "email" | "tel" | "text";
+    maxLength?: number;
+  }
 > = {
-  BVN: {label: "Bank Verification Number (BVN)", placeholder: "e.g. 12345678901", inputMode: "numeric", maxLength: 11},
-  NIN: {label: "National Identification Number (NIN)", placeholder: "e.g. 98765432109", inputMode: "numeric", maxLength: 11},
+  BVN: {
+    label: "Bank Verification Number (BVN)",
+    placeholder: "e.g. 12345678901",
+    inputMode: "numeric",
+    maxLength: 11,
+  },
+  NIN: {
+    label: "National Identification Number (NIN)",
+    placeholder: "e.g. 98765432109",
+    inputMode: "numeric",
+    maxLength: 11,
+  },
   EMAIL: {label: "Email address", placeholder: "e.g. adaeze@example.com", inputMode: "email"},
   PHONE: {label: "Mobile number", placeholder: "e.g. 08012345678", inputMode: "tel"},
 };

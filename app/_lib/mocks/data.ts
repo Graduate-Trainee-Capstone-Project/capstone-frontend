@@ -65,7 +65,12 @@ export const mockProducts: Product[] = [
     productName: "Current account",
     requiredIdentifiers: ["BVN"],
     additionalFieldsSchema: [
-      {field: "chequeBookRequested", label: "Request a cheque book", type: "checkbox", required: false},
+      {
+        field: "chequeBookRequested",
+        label: "Request a cheque book",
+        type: "checkbox",
+        required: false,
+      },
     ],
   },
   {
@@ -136,7 +141,9 @@ export const mockProducts: Product[] = [
     productCode: "INSURANCE",
     productName: "Insurance",
     requiredIdentifiers: ["EMAIL", "PHONE"],
-    additionalFieldsSchema: [{field: "policyType", label: "Policy type", type: "text", required: false}],
+    additionalFieldsSchema: [
+      {field: "policyType", label: "Policy type", type: "text", required: false},
+    ],
   },
 ];
 
@@ -229,7 +236,9 @@ export function getSecurityCheckAttempts(draftId: string): Record<SecurityCheckT
 function toSingleAddressString(address?: AddressInfo[] | null): string | null {
   const first = address?.[0];
   if (!first) return null;
-  const parts = [first.houseNumber, first.street, first.city, first.state, first.country].filter(Boolean);
+  const parts = [first.houseNumber, first.street, first.city, first.state, first.country].filter(
+    Boolean,
+  );
   return parts.length > 0 ? parts.join(", ") : null;
 }
 
