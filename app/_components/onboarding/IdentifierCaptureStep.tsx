@@ -11,6 +11,7 @@ import {Skeleton} from "@/app/_ui/Skeleton";
 import {normalizePhone, validateIdentifier} from "@/app/_utils/validators";
 import {hasCompletedProduct} from "@/app/_utils/completedProducts";
 import {rememberBvn} from "@/app/_utils/knownBvn";
+import {lookupMockBvnBioData} from "@/app/_utils/mockBvnDirectory";
 import {productDisplayName} from "@/app/_constants";
 import type {DraftFormData, DraftStep, ExistingCustomerData, IdentifierType, ProductCode, SaveDraftRequest} from "@/app/_types";
 
@@ -39,6 +40,7 @@ export function IdentifierCaptureStep({productCode}: IdentifierCaptureStepProps)
   const setFromStartResponse = useOnboardingStore((state) => state.setFromStartResponse);
   const setPrimaryIdentifierValue = useOnboardingStore((state) => state.setPrimaryIdentifierValue);
   const patchFormData = useOnboardingStore((state) => state.patchFormData);
+  const setPendingBvnPrefill = useOnboardingStore((state) => state.setPendingBvnPrefill);
 
   const [values, setValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -105,6 +107,11 @@ export function IdentifierCaptureStep({productCode}: IdentifierCaptureStepProps)
       {
         onSuccess: (data) => {
           setFromStartResponse(data, productCode);
+
+          if (values.BVN && !data.existingCustomer) {
+            const bvnBioData = lookupMockBvnBioData(values.BVN);
+            if (bvnBioData) setPendingBvnPrefill(bvnBioData);
+          }
 
           const identifierPrefill: Partial<DraftFormData> = {};
           if (values.EMAIL) identifierPrefill.email = normalize("EMAIL", values.EMAIL);
